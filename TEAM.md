@@ -37,7 +37,8 @@ Swap roles if someone's skills fit another one better. Just update this file.
 Tick the boxes as you go.
 
 ### Phase 1: Foundations (Oct 19–20)
-- [ ] **Aryesh:** repo layout, `uv` project, Nemotron client (cache + cost meter + hard $ cap), check model IDs with `/v1/models`
+- [x] **Aryesh:** repo layout, `uv` project, Nemotron client (cache + cost meter + hard $ cap), `SandboxExecutor` + `report.json` contracts, fake `samples/report.json`
+- [ ] **Aryesh:** check model IDs with `scripts/check_models.py` (needs `NEBIUS_API_KEY`)
 - [ ] **Jatin:** request Sandbox beta access *today*, `SandboxExecutor` + `DockerSandbox`, claim credits, get Tavily key
 - [ ] **Ruchir:** Next.js app skeleton, fake `report.json`, layout of the morning report page
 

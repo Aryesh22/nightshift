@@ -1,0 +1,129 @@
+{
+  "run_id": "FAKE-2026-10-19-fakelib",
+  "library": {
+    "name": "fakelib",
+    "version": "1.4.2",
+    "repo": "https://github.com/example/fakelib"
+  },
+  "stats": {
+    "properties_proposed": 214,
+    "failures": 37,
+    "triaged_real": 8,
+    "verified": 5,
+    "cost_usd": 0.87,
+    "cost_per_verified_bug": 0.174
+  },
+  "cost_by_model": {
+    "lightning": 0.19,
+    "super": 0.36,
+    "ultra": 0.32
+  },
+  "bugs": [
+    {
+      "id": "b1",
+      "title": "decode(encode(x)) drops trailing whitespace in values",
+      "severity": "medium",
+      "property": "roundtrip",
+      "repro": "from fakelib import encode, decode\nx = {\"a\": \"b \"}\nassert decode(encode(x)) == x",
+      "traceback": "AssertionError: assert {'a': 'b'} == {'a': 'b '}",
+      "root_cause": "decode() calls .strip() on every value, but encode() never escapes whitespace.",
+      "patch_diff": "--- a/src/fakelib/codec.py\n+++ b/src/fakelib/codec.py\n@@ -41,7 +41,7 @@ def decode(data: str) -> dict:\n-    key, _, value = line.partition(\"=\")\n+    key, _, value = line.partition(\"=\")  # keep '=' inside values\n-    return {k: v.strip() for k, v in pairs}\n+    return {k: v for k, v in pairs}\n",
+      "patch_verified": true,
+      "duplicate_of": null,
+      "route_trace": [
+        {
+          "stage": "propose",
+          "model": "lightning",
+          "thinking": 0,
+          "cost_usd": 0.0011,
+          "cached": false
+        },
+        {
+          "stage": "triage",
+          "model": "super",
+          "thinking": 512,
+          "cost_usd": 0.0042,
+          "cached": false
+        },
+        {
+          "stage": "confirm",
+          "model": "ultra",
+          "thinking": 2048,
+          "cost_usd": 0.031,
+          "cached": false
+        },
+        {
+          "stage": "dedupe",
+          "model": "lightning",
+          "thinking": 0,
+          "cost_usd": 0.0004,
+          "cached": false
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "title": "parse_range crashes with IndexError on an empty string",
+      "severity": "low",
+      "property": "crash",
+      "repro": "from fakelib import parse_range\nparse_range(\"\")",
+      "traceback": "Traceback (most recent call last):\n  File \"fakelib/ranges.py\", line 12, in parse_range\n    start = parts[0][0]\nIndexError: string index out of range",
+      "root_cause": "No guard for empty input before indexing the first character.",
+      "patch_diff": "--- a/src/fakelib/ranges.py\n+++ b/src/fakelib/ranges.py\n@@ -10,2 +10,4 @@\n+    if not text:\n+        raise ValueError(\"empty range\")\n",
+      "patch_verified": true,
+      "duplicate_of": null,
+      "route_trace": [
+        {
+          "stage": "propose",
+          "model": "lightning",
+          "thinking": 0,
+          "cost_usd": 0.0009,
+          "cached": false
+        },
+        {
+          "stage": "triage",
+          "model": "lightning",
+          "thinking": 0,
+          "cost_usd": 0.0006,
+          "cached": false
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "title": "merge() is not associative for overlapping keys",
+      "severity": "medium",
+      "property": "invariant",
+      "repro": "from fakelib import merge\na, b, c = {'k': [1]}, {'k': [2]}, {'k': [3]}\nassert merge(merge(a, b), c) == merge(a, merge(b, c))",
+      "traceback": "AssertionError: [1, 2, 3] != [1, [2, 3]]",
+      "root_cause": "Nested lists are appended instead of extended when the right side is already merged.",
+      "patch_diff": "",
+      "patch_verified": false,
+      "duplicate_of": "https://github.com/example/fakelib/issues/123",
+      "route_trace": [
+        {
+          "stage": "propose",
+          "model": "lightning",
+          "thinking": 0,
+          "cost_usd": 0.0012,
+          "cached": false
+        },
+        {
+          "stage": "triage",
+          "model": "super",
+          "thinking": 1024,
+          "cost_usd": 0.0071,
+          "cached": false
+        },
+        {
+          "stage": "dedupe",
+          "model": "lightning",
+          "thinking": 0,
+          "cost_usd": 0.0003,
+          "cached": false
+        }
+      ]
+    }
+  ],
+  "schema_version": 0
+}

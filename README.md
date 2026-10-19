@@ -22,8 +22,26 @@ A cost-aware cascade routes each step to the cheapest (model, thinking budget) t
 - Tavily
 - Python, Hypothesis, Next.js
 
+## Setup
+Needs [uv](https://docs.astral.sh/uv/) and Python 3.12.
+```bash
+uv sync                                     # install deps into .venv
+cp .env.example .env                        # then paste your NEBIUS_API_KEY
+uv run python scripts/check_models.py       # confirm the Nemotron model IDs (free)
+uv run python scripts/check_models.py --ping  # one tiny call per tier (< $0.01)
+uv run pytest                               # run the tests (no API key needed)
+```
+
+## Repo layout
+| Path | What | Owner |
+|---|---|---|
+| `src/nightshift/llm/` | Nemotron client: response cache, cost meter, hard $ cap | Aryesh |
+| `src/nightshift/sandbox/base.py` | `SandboxExecutor` interface the pipeline calls | Jatin implements |
+| `src/nightshift/report.py` | `report.json` contract | shared |
+| `samples/report.json` | **Fake** report for building the dashboard | Ruchir reads |
+
 ## Status
-🚧 Under active development. Setup instructions coming soon.
+🚧 Under active development.
 
 ## Team
 - [@Aryesh22](https://github.com/Aryesh22)

@@ -1,0 +1,28 @@
+[project]
+name = "nightshift"
+version = "0.1.0"
+description = "An overnight AI bug hunter for open-source Python libraries"
+readme = "README.md"
+authors = [
+    { name = "Aryesh Singh", email = "AryeshSingh22@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28.1",
+    "python-dotenv>=1.2.4",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "respx>=0.23.1",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

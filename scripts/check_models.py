@@ -12,7 +12,7 @@ import sys
 
 import httpx
 
-from nightshift.config import MODELS, Settings
+from nightshift.config import API_KEY_ENV, MODELS, PROVIDER, Settings
 from nightshift.llm.client import split_reasoning
 
 PROMPT = [{"role": "user", "content": "What is 17 * 23? Answer with just the number."}]
@@ -41,12 +41,19 @@ async def probe(http: httpx.AsyncClient, base_url: str, key: str, model: str, ex
 async def main() -> None:
     settings = Settings.from_env()
     if not settings.api_key:
-        sys.exit("NEBIUS_API_KEY is not set.")
-    variants = {
-        "thinking off": {"chat_template_kwargs": {"enable_thinking": False}},
-        "thinking on": {"chat_template_kwargs": {"enable_thinking": True}},
-        "reasoning_budget=128": {"chat_template_kwargs": {"enable_thinking": True}, "reasoning_budget": 128},
-    }
+        sys.exit(f"{API_KEY_ENV[PROVIDER]} is not set (provider: {PROVIDER}).")
+    if PROVIDER == "openrouter":
+        variants = {
+            "thinking off": {"reasoning": {"enabled": False}},
+            "thinking on": {"reasoning": {"enabled": True}},
+            "reasoning max_tokens=128": {"reasoning": {"max_tokens": 128}},
+        }
+    else:
+        variants = {
+            "thinking off": {"chat_template_kwargs": {"enable_thinking": False}},
+            "thinking on": {"chat_template_kwargs": {"enable_thinking": True}},
+            "reasoning_budget=128": {"chat_template_kwargs": {"enable_thinking": True}, "reasoning_budget": 128},
+        }
     async with httpx.AsyncClient(timeout=120) as http:
         for base_url in sorted({s.base_url for s in MODELS.values()}):
             try:
@@ -60,7 +67,7 @@ async def main() -> None:
             print(f"\n[{spec.tier}] {spec.model_id} @ {spec.base_url}")
             for label, extra in variants.items():
                 print(f"  {label:22} {await probe(http, spec.base_url, settings.api_key, spec.model_id, extra)}")
-    if os.getenv("NIGHTSHIFT_SEND_REASONING_BUDGET") != "1":
+    if PROVIDER == "nebius" and os.getenv("NIGHTSHIFT_SEND_REASONING_BUDGET") != "1":
         print("\nIf 'reasoning_budget=128' produced shorter reasoning, set NIGHTSHIFT_SEND_REASONING_BUDGET=1.")
 
 

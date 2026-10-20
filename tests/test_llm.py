@@ -102,3 +102,21 @@ def test_split_reasoning(message, expected):
 
 async def _no_sleep(_):
     return None
+
+
+def test_thinking_fields_per_provider():
+    from nightshift.llm.client import thinking_fields
+
+    assert thinking_fields("openrouter", 0) == {"reasoning": {"enabled": False}}
+    assert thinking_fields("openrouter", 512) == {"reasoning": {"max_tokens": 512}}
+    assert thinking_fields("nebius", 0) == {"chat_template_kwargs": {"enable_thinking": False}}
+    assert thinking_fields("nebius", 512)["chat_template_kwargs"] == {"enable_thinking": True}
+
+
+def test_openrouter_models_are_free_nemotron_variants():
+    from nightshift.config import OPENROUTER_MODELS
+
+    assert set(OPENROUTER_MODELS) == {"lightning", "super", "ultra"}
+    for spec in OPENROUTER_MODELS.values():
+        assert spec.model_id.startswith("nvidia/nemotron") and spec.model_id.endswith(":free")
+        assert spec.input_price == spec.output_price == 0

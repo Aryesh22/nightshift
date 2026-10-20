@@ -1,4 +1,4 @@
-"""Async client for Nemotron models on Nebius Token Factory (OpenAI-compatible API).
+"""Async client for Nemotron models on Nebius Token Factory or OpenRouter (OpenAI-compatible API).
 
 Every call goes through the response cache and the hard budget. The `thinking`
 argument is the router's knob: 0 disables reasoning, N > 0 enables it and allows up
@@ -66,6 +66,16 @@ def split_reasoning(message: dict) -> tuple[str, str]:
     return content.strip(), reasoning.strip()
 
 
+def thinking_fields(provider: str, thinking: int) -> dict:
+    """Provider-specific request fields that turn reasoning off (0) or on with a budget."""
+    if provider == "openrouter":
+        return {"reasoning": {"max_tokens": thinking} if thinking > 0 else {"enabled": False}}
+    fields: dict = {"chat_template_kwargs": {"enable_thinking": thinking > 0}}
+    if thinking > 0 and SEND_REASONING_BUDGET:
+        fields["reasoning_budget"] = thinking
+    return fields
+
+
 def estimate_tokens(messages: list[dict]) -> int:
     # Deliberately pessimistic (~3 chars/token) so reservations overestimate.
     return sum(len(str(m.get("content", ""))) for m in messages) // 3 + 16 * len(messages)
@@ -108,10 +118,8 @@ class NemotronClient:
             "messages": messages,
             "max_tokens": max_tokens + thinking,
             "temperature": temperature,
-            "chat_template_kwargs": {"enable_thinking": thinking > 0},
+            **thinking_fields(spec.provider, thinking),
         }
-        if thinking > 0 and SEND_REASONING_BUDGET:
-            body["reasoning_budget"] = thinking
         if json_mode:
             body["response_format"] = {"type": "json_object"}
 

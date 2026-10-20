@@ -37,7 +37,9 @@ uv run pytest                               # run the tests (no API key needed)
 |---|---|---|
 | `src/nightshift/llm/` | Nemotron client: response cache, cost meter, hard $ cap | Aryesh |
 | `src/nightshift/sandbox/base.py` | `SandboxExecutor` interface the pipeline calls | Jatin implements |
-| `src/nightshift/report.py` | `report.json` contract | shared |
+| `src/nightshift/contracts/` | Contract records, frozen test wrapper, harness audit, outcome classes | Aryesh |
+| `src/nightshift/sandbox/local.py` | Dev-only local runner (**not isolated**; trusted targets only) | Aryesh |
+| `src/nightshift/report.py` | `report.json` contract (schema v1) | shared |
 | `samples/report.json` | **Fake** report for building the dashboard | Ruchir reads |
 
 ## Status

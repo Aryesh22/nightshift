@@ -56,7 +56,9 @@ class SandboxExecutor(ABC):
 
     @abstractmethod
     async def run(self, box: SandboxHandle, test_code: str, *, timeout_s: float = 60.0) -> RunResult:
-        """Write `test_code` to a test file in `box`, run pytest on it, return the result.
+        """Write `test_code` to a test file in `box` and run
+        `python -m pytest -q -s -p no:cacheprovider <file>` (`-s` so the
+        `NIGHTSHIFT_STATS` line reaches stdout). No API keys in the environment.
 
         Must never raise for test failures, crashes or timeouts; report them in RunResult.
         """

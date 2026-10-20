@@ -25,8 +25,9 @@ We changed the plan after the research review in `NIGHTSHIFT_RESEARCH.md`. In on
 | **Ruchir** ([@Ruchir038](https://github.com/Ruchir038)) | 🎨 Product & evaluation | Next.js dashboard, evidence views, PBT-Bench evaluation (Aryesh helps set it up), deploy, video, Devpost write-up |
 
 ## Contracts between us
-- **Aryesh ↔ Jatin:** `src/nightshift/sandbox/base.py` (`prepare`, `fork`, `run` → `RunResult`, `close`).
-  `run` executes `python -m pytest -q -s -p no:cacheprovider <file>` and returns stdout, which carries a `NIGHTSHIFT_STATS {...}` line.
+- **Aryesh ↔ Jatin:** `src/nightshift/sandbox/base.py` (`prepare(repo_url, ref, setup_cmds)`, `fork`, `put_file`, `run(cmd)` → `RunResult`, `close`).
+  `src/nightshift/sandbox/local.py` is a working (un-isolated) reference implementation; `DockerSandbox` should pass the same tests.
+  Contract campaigns run `python -m pytest -q -s ...`, whose stdout carries a `NIGHTSHIFT_STATS {...}` line.
 - **Aryesh/Jatin → Ruchir:** `runs/<run_id>/report.json`, defined in `src/nightshift/report.py`.
   Build the dashboard against **`samples/report.json`** (fake data, schema v1). Regenerate it with `uv run python samples/make_sample_report.py`.
 - **Finding statuses**, used everywhere: `raw_anomaly` → `reproducible` → `ai_reviewed` → `human_validated` → `maintainer_confirmed`, plus `unresolved` and `rejected` (with a reason). The dashboard shows rejected findings too.
@@ -37,6 +38,7 @@ Tick the boxes as you go.
 ### Phase 1: Foundations (Oct 19–21)
 - [x] **Aryesh:** repo, `uv`, Nemotron client (cache, cost meter, hard $ cap), sandbox + report contracts
 - [x] **Aryesh:** contract format, controller-owned test wrapper, adapter audit, first contract/adapter pair (`base64` round trip)
+- [ ] **Aryesh:** move `pipeline/` onto contracts + `report.json` v1 (it still writes v0 and uses the old learned router)
 - [ ] **Aryesh:** get the Nebius API key, then run `scripts/check_models.py --ping`. Confirm model IDs and which reasoning controls actually work.
 - [ ] **Jatin:** request Sandbox beta access **today**. Build `DockerSandbox` (no secrets inside, CPU/memory/time limits). Get a Tavily key.
 - [ ] **Ruchir:** Next.js skeleton using `samples/report.json`, plus the finding card layout (the 5 questions below)

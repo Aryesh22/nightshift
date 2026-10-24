@@ -43,9 +43,21 @@ def classify(result: RunResult) -> CampaignOutcome:
     reach = stats["assertion_reached"] / stats["entered"]
     low = stats["entered"] >= MIN_SAMPLE_FOR_REACH and reach < LOW_REACH_RATE
     uncalled = [api for api, n in stats["api_calls"].items() if n == 0]
+    uncalled += [api for api in stats.get("required_apis", ()) if api not in stats["api_calls"]]
+    if stats.get("untracked_apis"):
+        return CampaignOutcome("setup_error", f"unsupported API tracking: {stats['untracked_apis']}", stats, reach, low)
 
     failure = stats.get("last_failure")
     if failure and result.exit_code != 0:
+        if failure.get("kind") == "setup_error":
+            return CampaignOutcome("setup_error", failure.get("error", "adapter/setup failed"), stats, reach, low)
+        # A first-stage target exception may legitimately prevent the second call.
+        early_target = (failure.get("kind") == "exception" and
+                        stats["api_calls"].get(failure.get("target_api"), 0) > 0)
+        if uncalled and not early_target:
+            return CampaignOutcome("vacuous", f"adapter never called {uncalled}", stats, reach, low)
+        if failure.get("kind") == "exception" and not early_target:
+            return CampaignOutcome("setup_error", "exception has no target invocation provenance", stats, reach, low)
         # A real failure on the first input is meaningful even with a tiny sample.
         reason = failure.get("error") or f"actual={failure.get('actual')} expected={failure.get('expected')}"
         return CampaignOutcome(failure["kind"], f"input={failure['input']}: {reason}", stats, reach, low)

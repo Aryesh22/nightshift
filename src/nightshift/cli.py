@@ -16,7 +16,7 @@ from nightshift.pipeline.run import RunConfig, run_nightshift
 # Implementations live in Jatin's workstream; see nightshift/sandbox/base.py for the contract.
 SANDBOXES = {
     "docker": "nightshift.sandbox.docker:DockerSandbox",
-    "nebius": "nightshift.sandbox.nebius:NebiusContreeSandbox",
+    "nebius": "nightshift.sandbox.nebius:NebiusDockerSandbox",
 }
 
 

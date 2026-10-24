@@ -11,12 +11,12 @@ import asyncio
 import json
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import httpx
 
 from nightshift.config import MODELS, ModelSpec, Settings
-from nightshift.llm.budget import Budget, cost_usd
+from nightshift.llm.budget import Budget, BudgetExceeded, cost_usd
 from nightshift.llm.cache import ResponseCache, cache_key
 
 RETRYABLE_STATUS = {408, 429, 500, 502, 503, 504}
@@ -40,6 +40,7 @@ class LLMResult:
     cost_usd: float
     cached: bool
     finish_reason: str | None
+    cost_status: str = "confirmed"
 
     def json(self) -> dict:
         """Parse the answer as a JSON object, tolerating a markdown fence around it."""
@@ -77,8 +78,15 @@ def thinking_fields(provider: str, thinking: int) -> dict:
 
 
 def estimate_tokens(messages: list[dict]) -> int:
-    # Deliberately pessimistic (~3 chars/token) so reservations overestimate.
-    return sum(len(str(m.get("content", ""))) for m in messages) // 3 + 16 * len(messages)
+    """Conservative bound for supported text requests to byte-level tokenizers.
+
+    One token per UTF-8 byte, plus framing/special-token headroom. Multimodal payloads
+    have no defensible text bound and are refused. Provider rates and tokenizer/chat
+    template assumptions still require verification; over-bound usage blocks the client.
+    """
+    if any(not isinstance(m.get("content", ""), str) for m in messages):
+        raise ValueError("only text messages have a supported reservation bound")
+    return len(json.dumps(messages, ensure_ascii=False).encode("utf-8")) + 1024 * len(messages) + 256
 
 
 class NemotronClient:
@@ -127,34 +135,71 @@ class NemotronClient:
         if (hit := self.cache.get(key)) is not None:
             return self._result(spec, thinking, hit, cached=True)
 
-        worst_case = cost_usd(spec, estimate_tokens(messages), body["max_tokens"])
-        reservation = self.budget.reserve(worst_case)
-        try:
+        if thinking < 0 or max_tokens <= 0:
+            raise ValueError("token limits must be positive (thinking may be zero)")
+        input_bound = estimate_tokens(messages)
+        if input_bound + body["max_tokens"] > spec.context_tokens:
+            raise ValueError("request's conservative token bound exceeds the model context")
+        worst_case = cost_usd(spec, input_bound, body["max_tokens"])
+        for retry in range(self.max_retries + 1):
             async with self._limits[tier]:
-                data = await self._post(spec, body)
-        except BaseException:
-            self.budget.release(reservation)
-            raise
-        result = self._result(spec, thinking, data, cached=False)
-        self.budget.settle(reservation, result.cost_usd, tier=tier, stage=stage)
-        self.cache.put(key, data)
-        return result
+                reservation = self.budget.reserve(worst_case)
+                attempt = self.budget.submitted(reservation, tier, stage)
+                attempt.update(model_id=spec.model_id, base_url=spec.base_url,
+                               max_tokens=body["max_tokens"], input_bound=input_bound,
+                               requested_controls=thinking_fields(spec.provider, thinking))
+                try:
+                    data = await self._post(spec, body)
+                    # Parsing is part of the accounting guard: a malformed 200 response
+                    # can still be billable and must become an explicit pending charge.
+                    result = self._result(spec, thinking, data, cached=False)
+                    usage = data.get("usage") or {}
+                    known = all(k in usage for k in ("prompt_tokens", "completion_tokens"))
+                    if not known:
+                        self.budget.mark_pending(attempt, "successful response omitted complete usage")
+                        result = replace(result, cost_usd=reservation, cost_status="pending")
+                    else:
+                        attempt.update(input_tokens=result.input_tokens, output_tokens=result.output_tokens,
+                                       reported_usd=result.cost_usd)
+                        if result.input_tokens > input_bound or result.output_tokens > body["max_tokens"]:
+                            self.budget.blocked_reason = "provider token usage exceeded the request bound"
+                            raise BudgetExceeded(self.budget.blocked_reason)
+                        self.budget.settle(reservation, result.cost_usd, tier=tier, stage=stage)
+                        attempt.update(status="settled", cost_usd=result.cost_usd)
+                except (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout):
+                    self.budget.release(reservation)
+                    attempt["status"] = "not_submitted"
+                    if retry == self.max_retries:
+                        raise
+                except httpx.HTTPStatusError as exc:
+                    status = exc.response.status_code
+                    if status == 408 or status >= 500:
+                        self.budget.mark_pending(attempt, f"ambiguous HTTP {status}")
+                    else:
+                        self.budget.release(reservation)
+                        attempt["status"] = "rejected"
+                    if status not in RETRYABLE_STATUS or retry == self.max_retries:
+                        raise
+                except httpx.TransportError as exc:
+                    self.budget.mark_pending(attempt, f"ambiguous transport: {type(exc).__name__}")
+                    if retry == self.max_retries:
+                        raise
+                except BaseException as exc:
+                    if attempt["status"] == "submitted":
+                        self.budget.mark_pending(attempt, f"unreconciled response: {type(exc).__name__}")
+                    raise
+                else:
+                    self.cache.put(key, data)
+                    return result
+            await asyncio.sleep(min(2**retry, 30))
+        raise AssertionError("unreachable")
 
     async def _post(self, spec: ModelSpec, body: dict) -> dict:
         url = spec.base_url.rstrip("/") + "/chat/completions"
         headers = {"Authorization": f"Bearer {self.settings.api_key}"}
-        for attempt in range(self.max_retries + 1):
-            try:
-                resp = await self.http.post(url, json=body, headers=headers)
-            except httpx.TransportError:
-                if attempt == self.max_retries:
-                    raise
-            else:
-                if resp.status_code not in RETRYABLE_STATUS or attempt == self.max_retries:
-                    resp.raise_for_status()
-                    return resp.json()
-            await asyncio.sleep(min(2**attempt, 30))
-        raise AssertionError("unreachable")
+        resp = await self.http.post(url, json=body, headers=headers)
+        resp.raise_for_status()
+        return resp.json()
 
     def _result(self, spec: ModelSpec, thinking: int, data: dict, cached: bool) -> LLMResult:
         choice = data["choices"][0]
@@ -162,6 +207,8 @@ class NemotronClient:
         usage = data.get("usage") or {}
         input_tokens = usage.get("prompt_tokens", 0)
         output_tokens = usage.get("completion_tokens", 0)
+        if any(type(n) is not int or n < 0 for n in (input_tokens, output_tokens)):
+            raise ValueError("provider token usage must contain nonnegative integers")
         return LLMResult(
             tier=spec.tier,
             model_id=spec.model_id,

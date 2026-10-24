@@ -115,12 +115,13 @@ Failure output:
 CONFIRM_SYSTEM = """\
 You are confirming a suspected bug in a Python library and preparing a report a maintainer
 would welcome. Produce:
-1. "repro": a minimal standalone Python script (no hypothesis, no pytest) that uses the
+1. "repro": a reduced standalone Python script (no hypothesis, no pytest) that uses the
    shrunk input and ends with an assert that FAILS while the bug exists and PASSES once it is
-   fixed. It must not catch the failure.
+   fixed. Preserve the discovery assertion expression, substituting the shrunk input
+   consistently. Call the target in that assertion. Do not catch the failure.
 2. "root_cause": the precise cause, pointing at the responsible code.
-3. "patch_diff": a minimal unified diff against the repository (paths relative to the repo
-   root, as `git apply` expects) that fixes the root cause without changing documented behaviour.
+3. "patch_diff": optional unified diff against library source only (or an empty string).
+   Never modify tests, repro scripts, controller files, assertions or verification artifacts.
 4. "title" (under 80 characters) and "severity" (low|medium|high).
 
 Reply with JSON only:

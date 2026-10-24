@@ -1,11 +1,12 @@
 # 🌙 Nightshift
 
 **An overnight AI bug hunter for open-source Python libraries.**
-Point it at a library before bed. In the morning you get verified bugs, each with a minimal reproduction, a tested patch, and the dollar cost of finding it.
+Run a supported library campaign and review candidate findings with reduced reproductions,
+optional patch checks, and cost accounting. Human validation remains a separate step.
 
 Built for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusglobalaihackathon.devpost.com/) · Track: **Coding & Agentic Engineering**
 
-## How it works
+## Intended workflow (integration in progress)
 1. **Read:** Nemotron 3.5 Lightning reads the whole library and its docs (Tavily pulls docs and changelogs)
 2. **Propose:** parallel Lightning calls write Hypothesis property-based tests
 3. **Execute:** tests run in isolated sandboxes (Nebius Token Factory Sandboxes, falling back to Docker), branched from one checkpoint
@@ -43,6 +44,26 @@ uv run pytest                                 # run the tests (no API key needed
 
 ## Status
 🚧 Under active development.
+
+`nightshift run` writes schema v1 reports. Findings remain AI-reviewed candidates until a
+human validates them; the legacy `bugs`/`verified` fields are compatibility views of repro
+checks. Patches are optional candidates checked against the unchanged discovery test and
+repro, protected file hashes, and a library-only diff policy. Hidden tests and a complete
+upstream test suite are not yet part of patch validation.
+
+The `docker` backend requires a running Docker engine. Its first preparation builds a
+Python 3.12 image with Git, pytest and Hypothesis. Clone/install preparation has network
+access; workers use independent filesystem checkpoints with network disabled, no host
+mounts or application credentials, and CPU/memory/process/time/output limits.
+`--sandbox nebius` uses Docker on a provisioned Nebius VM: set
+`NIGHTSHIFT_NEBIUS_DOCKER_HOST=ssh://user@your-nebius-vm`. It has no local fallback and does
+not implement the native Nebius/Contree managed sandbox API.
+
+The model client reserves a conservative UTF-8 byte bound for supported text requests.
+Each retry receives its own reservation. Missing usage, ambiguous transport failures and
+malformed responses remain pending in the report's accounting ledger. Provider rates and
+tokenizer/template assumptions still require verification; over-bound usage blocks
+further calls for reconciliation.
 
 ## Team
 - [@Aryesh22](https://github.com/Aryesh22)

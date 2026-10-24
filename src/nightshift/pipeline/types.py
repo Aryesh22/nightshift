@@ -66,3 +66,4 @@ class Bug:
     repro_verified: bool
     duplicate_of: str | None = None
     route_trace: list[RouteStep] = field(default_factory=list)
+    verification: dict = field(default_factory=dict)

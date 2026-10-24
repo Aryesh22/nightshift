@@ -55,7 +55,7 @@ async def call_with_cascade(
         )
         try:
             parsed = parse(result.json())
-        except (ValueError, KeyError, TypeError) as exc:
+        except (ValueError, KeyError, TypeError, SyntaxError) as exc:
             parsed, ok, feedback = None, False, f"Output was not usable: {exc}"
         else:
             ok, feedback = await verify(parsed) if verify else (True, "")

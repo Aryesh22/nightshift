@@ -1,8 +1,11 @@
-"""End-to-end run against a tiny git repo, a scripted model, and an in-memory sandbox."""
+"""End-to-end run against a tiny git repo, a scripted model, and a trusted process runner for real confirmation."""
 
+import difflib
 import json
+import shlex
 import subprocess
-import uuid
+import sys
+from pathlib import Path
 
 import httpx
 import pytest
@@ -12,22 +15,29 @@ from nightshift.config import Settings
 from nightshift.llm import NemotronClient, ResponseCache
 from nightshift.pipeline import prompts
 from nightshift.pipeline.run import RunConfig, run_nightshift
-from nightshift.sandbox import EnvHandle, RunResult, SandboxExecutor
+from nightshift.sandbox import RunResult
+from nightshift.sandbox.local import UnsafeLocalSandbox
+from nightshift.report import Report
 
-LIB = '''\
+LIB = r'''
 def encode(s: str) -> str:
     """Escape commas so that decode(encode(s)) == s for any str."""
-    return s.replace(",", "\\\\,")
+    return s.replace("\\", "").replace(",", "\\,")
 
 
 def decode(s: str) -> str:
-    return s.replace("\\\\,", ",")
+    return s.replace("\\,", ",")
 
 
 def slugify(s: str) -> str:
     """Idempotent: slugify(slugify(s)) == slugify(s)."""
     return s.strip().lower().replace(" ", "-")
 '''
+FIXED_LIB = LIB.replace(r's.replace("\\", "").replace', 's.replace')
+PATCH_DIFF = "".join(difflib.unified_diff(
+    LIB.splitlines(keepends=True), FIXED_LIB.splitlines(keepends=True),
+    fromfile="a/minilib/__init__.py", tofile="b/minilib/__init__.py",
+))
 
 FAILING_TEST = "from hypothesis import given, settings, strategies as st\nfrom minilib import encode, decode\n\n@given(st.text())\n@settings(max_examples=300, deadline=None)\ndef test_property(s):  # expect-fail\n    assert decode(encode(s)) == s\n"
 PASSING_TEST = "from hypothesis import given, settings, strategies as st\nfrom minilib import slugify\n\n@given(st.text())\n@settings(max_examples=300, deadline=None)\ndef test_property(s):\n    assert slugify(slugify(s)) == slugify(s)\n"
@@ -46,47 +56,26 @@ def repo(tmp_path):
     return f"file://{path}"
 
 
-class FakeSandbox(SandboxExecutor):
-    """Simulates test outcomes from markers in the generated files."""
+class FakeSandbox(UnsafeLocalSandbox):
+    """Script proposal outcomes; execute confirmation, discovery replay and patches.
 
-    def __init__(self):
-        self.envs: dict[str, dict] = {}
+    Only this trusted fixture runs on the host. Production uses DockerSandbox.
+    """
 
     async def prepare(self, repo_url, ref, setup_cmds):
-        self.envs["base"] = {"files": {}, "patched": False}
-        return EnvHandle("base")
-
-    async def fork(self, env):
-        new = EnvHandle(uuid.uuid4().hex)
-        parent = self.envs[env.id]
-        self.envs[new.id] = {"files": dict(parent["files"]), "patched": parent["patched"]}
-        return new
-
-    async def put_file(self, env, path, content):
-        self.envs[env.id]["files"][path] = content
+        return await super().prepare(repo_url, ref, [])
 
     async def run(self, env, cmd, timeout_s=120.0):
-        state = self.envs[env.id]
-        if "pytest" in cmd:
-            code = state["files"][cmd.split()[-1]]
+        if "-m pytest " in cmd and "test_discovery.py" not in cmd:
+            code = (Path(env.meta["workdir"]) / cmd.split()[-1]).read_text()
             if "expect-invalid" in code:
                 return RunResult(2, "ERROR collecting test\nImportError: cannot import name 'slugfy'", "", 0.1)
             if "expect-fail" in code:
-                return RunResult(1, "Falsifying example: test_property(\n    s='\\\\,',\n)\nE   AssertionError: assert ',' == '\\\\,'", "", 0.2)
+                return RunResult(1, "Falsifying example: test_property(s='backslash')\nAssertionError: roundtrip lost input", "", 0.2)
             return RunResult(0, "1 passed", "", 0.2)
-        if cmd.startswith("git apply"):
-            ok = "+fixed" in state["files"]["nightshift_fix.patch"]
-            state["patched"] = ok
-            return RunResult(0 if ok else 1, "", "" if ok else "error: patch failed", 0.1)
-        if "nightshift_repro.py" in cmd:
-            if "expect-bogus" in state["files"]["nightshift_repro.py"]:
-                return RunResult(0, "", "", 0.1)  # passes on original code: no bug shown
-            return RunResult(0 if state["patched"] else 1, "", "" if state["patched"] else "AssertionError", 0.1)
-        raise AssertionError(f"unexpected command {cmd}")
-
-    async def close(self, env):
-        if env.id != "base":
-            self.envs.pop(env.id, None)
+        if cmd.startswith("python "):
+            cmd = shlex.quote(sys.executable) + cmd[len("python"):]
+        return await super().run(env, cmd, timeout_s)
 
 
 def scripted_model(request: httpx.Request) -> httpx.Response:
@@ -111,8 +100,8 @@ def scripted_model(request: httpx.Request) -> httpx.Response:
     elif system == prompts.CONFIRM_SYSTEM:
         answer = {"title": "encode/decode round-trip loses backslash before comma", "severity": "medium",
                   "repro": "from minilib import encode, decode\nassert decode(encode('\\\\,')) == '\\\\,'\n",
-                  "root_cause": "encode does not escape existing backslashes.",
-                  "patch_diff": "--- a/minilib/__init__.py\n+++ b/minilib/__init__.py\n@@ -1 +1 @@\n-old\n+fixed\n"}
+                  "root_cause": "encode drops existing backslashes.",
+                  "patch_diff": PATCH_DIFF}
     else:
         raise AssertionError("unknown prompt")
     usage = {"prompt_tokens": 2000, "completion_tokens": 300}
@@ -148,6 +137,10 @@ async def test_full_run_finds_verifies_and_reports_the_planted_bug(repo, tmp_pat
 
     written = json.loads(next((tmp_path / "runs").glob("*-minilib/report.json")).read_text())
     assert written["bugs"][0]["id"] == "b1"
+    parsed = Report.from_dict(written)
+    assert parsed.findings[0].status == "ai_reviewed"
+    assert parsed.findings[0].replays_passed == 3
+    assert parsed.cost_per_validated_finding is None
     assert set(report["cost_by_model"]) <= {"lightning", "super", "ultra"}
 
 

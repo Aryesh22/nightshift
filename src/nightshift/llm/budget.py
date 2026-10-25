@@ -31,7 +31,7 @@ class Budget:
     calls: int = 0
     attempts: list[dict] = field(default_factory=list)
     pending: list[dict] = field(default_factory=list)
-    blocked_reason: str | None = None
+    overruns: list[dict] = field(default_factory=list)
 
     def __post_init__(self):
         if not math.isfinite(self.limit_usd) or self.limit_usd < 0:
@@ -44,8 +44,6 @@ class Budget:
     def reserve(self, amount_usd: float) -> float:
         if not math.isfinite(amount_usd) or amount_usd < 0:
             raise ValueError("reservation must be finite and nonnegative")
-        if self.blocked_reason:
-            raise BudgetExceeded(self.blocked_reason)
         if amount_usd > self.remaining_usd:
             raise BudgetExceeded(
                 f"call needs up to ${amount_usd:.4f} but only ${self.remaining_usd:.4f} "
@@ -75,12 +73,18 @@ class Budget:
         if not math.isfinite(actual_usd) or actual_usd < 0:
             raise ValueError("usage cost must be finite and nonnegative")
         if actual_usd > reservation_usd + 1e-12:
-            self.blocked_reason = "provider usage exceeded the reserved bound; reconcile before continuing"
-            raise BudgetExceeded(self.blocked_reason)
+            # Our estimate was wrong, not the cap. Charge what was really used, keep the
+            # overrun for the report, and let `reserve` enforce the cap on the next call.
+            self.overruns.append({"tier": tier, "stage": stage, "reserved_usd": reservation_usd,
+                                  "actual_usd": actual_usd})
         self.release(reservation_usd)
         self.spent_usd += actual_usd
         self.by_tier[tier] += actual_usd
         self.by_stage[stage] += actual_usd
+        if self.spent_usd > self.limit_usd + 1e-12:
+            raise BudgetExceeded(
+                f"spent ${self.spent_usd:.4f} of the ${self.limit_usd:.2f} cap after a provider overrun"
+            )
 
     def summary(self) -> dict:
         return {
@@ -90,7 +94,7 @@ class Budget:
             "pending_usd": round(sum(a["reservation_usd"] for a in self.pending), 6),
             "pending": list(self.pending),
             "attempts": list(self.attempts),
-            "blocked_reason": self.blocked_reason,
+            "overruns": list(self.overruns),
             "calls": self.calls,
             "by_tier": {k: round(v, 6) for k, v in self.by_tier.items()},
             "by_stage": {k: round(v, 6) for k, v in self.by_stage.items()},

@@ -34,12 +34,12 @@ class RunConfig:
     variants_per_target: int = 2
     runs_dir: Path = Path("runs")
     setup_cmds: tuple[str, ...] = tuple(SETUP_CMDS)
-    # Compatibility for callers predating dual-mode campaigns. The CLI explicitly
-    # selects Core by default; new API callers select mode="core" here or below.
-    mode: Literal["core", "baseline"] = "baseline"
+    # "core" is the contract-first pipeline (TEAM.md v2). "baseline" is the original
+    # one-prompt + passive-judge pipeline, kept only as the comparison arm of the benchmark.
+    mode: Literal["core", "baseline"] = "core"
     airgapped: bool = False
     online_lookup: bool = False
-    tavily_credits: float = 1000
+    tavily_credits: float = 100  # per run; TEAM.md splits the 1,000 free credits/month
     doc_paths: tuple[str, ...] = ("README.md",)
     max_examples: int = 200
     campaign_timeout_s: float = 120

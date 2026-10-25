@@ -113,7 +113,7 @@ async def test_full_run_finds_verifies_and_reports_the_planted_bug(repo, tmp_pat
     respx.post(url__regex=r".*/chat/completions").mock(side_effect=scripted_model)
     settings = Settings(api_key="t", budget_usd=1.0, cache_path=tmp_path / "c", runs_dir=tmp_path / "runs")
     client = NemotronClient(settings, cache=ResponseCache(":memory:"))
-    config = RunConfig(repo_url=repo, package="minilib", runs_dir=tmp_path / "runs", variants_per_target=1)
+    config = RunConfig(repo_url=repo, package="minilib", mode="baseline", runs_dir=tmp_path / "runs", variants_per_target=1)
 
     report = await run_nightshift(config, client, FakeSandbox())
 
@@ -160,7 +160,7 @@ async def test_bug_is_dropped_when_repro_passes_on_original_code(repo, tmp_path)
     respx.post(url__regex=r".*/chat/completions").mock(side_effect=bogus_repro)
     settings = Settings(api_key="t", budget_usd=1.0, cache_path=tmp_path / "c", runs_dir=tmp_path / "runs")
     client = NemotronClient(settings, cache=ResponseCache(":memory:"))
-    config = RunConfig(repo_url=repo, package="minilib", runs_dir=tmp_path / "runs", variants_per_target=1)
+    config = RunConfig(repo_url=repo, package="minilib", mode="baseline", runs_dir=tmp_path / "runs", variants_per_target=1)
 
     report = await run_nightshift(config, client, FakeSandbox())
 
@@ -176,7 +176,7 @@ async def test_run_stops_cleanly_and_still_writes_report_when_budget_runs_out(re
     respx.post(url__regex=r".*/chat/completions").mock(side_effect=scripted_model)
     settings = Settings(api_key="t", budget_usd=0.004, cache_path=tmp_path / "c", runs_dir=tmp_path / "runs")
     client = NemotronClient(settings, cache=ResponseCache(":memory:"))
-    config = RunConfig(repo_url=repo, package="minilib", runs_dir=tmp_path / "runs", variants_per_target=1)
+    config = RunConfig(repo_url=repo, package="minilib", mode="baseline", runs_dir=tmp_path / "runs", variants_per_target=1)
 
     report = await run_nightshift(config, client, FakeSandbox())
 

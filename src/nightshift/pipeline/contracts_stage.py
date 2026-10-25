@@ -7,7 +7,7 @@ import copy
 import json
 import re
 import math
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from itertools import combinations
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -147,16 +147,15 @@ def build_documentation(repo: Path, package: str, revision: str, *,
 
 
 async def retrieve_documentation(bundle: DocumentationBundle, repo_url: str, tavily, *, max_urls: int = 2):
-    """Search for official docs, but extract only URLs explicitly pinned to this commit.
+    """Extract the approved doc files from GitHub at exactly this commit, as a live receipt.
 
-    Pinned local documentation remains authoritative when search/extraction is unavailable.
-    Unversioned search snippets are never promoted to contract evidence.
+    Pinned local documentation remains authoritative when extraction is unavailable.
+    Only commit-pinned URLs whose text matches the local file become contract evidence.
     """
     parsed = urlsplit(repo_url.removesuffix(".git"))
     if parsed.hostname != "github.com":
         return []
     origin = "https://github.com/" + parsed.path.strip("/")
-    await tavily.search(f"{origin} {bundle.revision} official documentation", domains=("github.com",), max_results=2)
     paths = [d.source for d in bundle.documents.values() if "#" not in d.source][:max_urls]
     urls = [f"{origin}/blob/{bundle.revision}/{path}" for path in paths]
     if not urls:
@@ -166,7 +165,6 @@ async def retrieve_documentation(bundle: DocumentationBundle, repo_url: str, tav
     for receipt in result.receipts:
         if receipt.url not in urls or f"/{bundle.revision}/" not in receipt.url:
             continue
-        from dataclasses import replace
         pinned = replace(receipt, source_version=bundle.revision, version_match=True)
         # Require an actual excerpt from the pinned local document as an additional
         # content check; a URL/hash alone does not establish version applicability.

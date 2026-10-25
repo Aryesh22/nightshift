@@ -15,10 +15,6 @@ from nightshift.pipeline.types import Execution, PropertyTest, Target, TriageVer
 VERDICTS = {"real_bug", "bad_test", "unclear"}
 MIN_CONFIDENCE = 0.6
 
-# Core uses controller-validated experiments and fixed Super calls. Baseline remains
-# the repaired passive classifier below; the two workflows share no learned routing state.
-from nightshift.pipeline.investigator import RefutationTools, investigate_candidate
-
 
 def parse_verdict(payload: dict) -> tuple[str, float, str]:
     verdict = payload["verdict"]

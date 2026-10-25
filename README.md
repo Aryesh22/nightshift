@@ -1,21 +1,19 @@
 # 🌙 Nightshift
 
 **An overnight AI bug hunter for open-source Python libraries.**
-Run a supported library campaign and review candidate findings with reduced reproductions,
-optional patch checks, and cost accounting. Human validation remains a separate step.
+Point it at a library before bed. In the morning you get candidate bugs that break what the docs promise, each with a reduced repro, the checks that tried to disprove it, and the dollar cost of finding it.
 
 Built for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusglobalaihackathon.devpost.com/) · Track: **Coding & Agentic Engineering**
 
-## Intended workflow (integration in progress)
-1. **Read:** Nemotron 3.5 Lightning reads the whole library and its docs (Tavily pulls docs and changelogs)
-2. **Propose:** parallel Lightning calls write Hypothesis property-based tests
-3. **Execute:** tests run in isolated sandboxes (Nebius Token Factory Sandboxes, falling back to Docker), branched from one checkpoint
-4. **Triage:** Nemotron 3 Super decides whether the *test* is wrong or the *code* is wrong
-5. **Confirm:** Nemotron 3 Ultra writes a minimal reproduction and a patch, then verifies the patch
-6. **Dedupe:** Tavily checks for existing GitHub issues
-7. **Report:** morning dashboard showing bugs, repros, patches, and cost per verified bug
+## How it works
+1. **Contract:** Nemotron 3.5 Lightning reads only the docs, signatures and docstrings and writes down what the library *promises* (round trips, equivalent calls), with an exact quote as evidence
+2. **Harness:** a second Lightning context writes the adapter and a Hypothesis strategy from the frozen contract and the source; Nemotron 3 Super approves the adapter without seeing function bodies
+3. **Execute:** the controller-owned test wrapper runs in an isolated sandbox (Docker locally, Docker on a Nebius VM remotely), forked from one checkpoint; it counts whether inputs really reached the assertion and the APIs
+4. **Investigate:** Super tries to *disprove* each failure with a fixed tool set and 3 fresh-process replays, and may answer `unresolved`
+5. **Dedupe:** Tavily searches the repo's own issues and release notes for known behaviour, as a lead to check
+6. **Report:** `report.json` with every candidate, rejected ones included, the checks that ran, and the cost
 
-A cost-aware cascade routes each step to the cheapest (model, thinking budget) that works, and escalates only on verifier failure.
+Patches are optional and come last (a capped Nemotron 3 Ultra review of the best survivors).
 
 ## Stack
 - NVIDIA Nemotron (Lightning / Super / Ultra) on Nebius Token Factory
@@ -37,82 +35,35 @@ uv run pytest                                 # run the tests (no API key needed
 |---|---|---|
 | `src/nightshift/llm/` | Nemotron client: response cache, cost meter, hard $ cap | Aryesh |
 | `src/nightshift/contracts/` | Contract records, frozen test wrapper, harness audit, outcome classes | Aryesh |
-| `src/nightshift/pipeline/` | Read → propose → triage → confirm (moving to contract-first) | Aryesh |
-| `src/nightshift/sandbox/` | `SandboxExecutor` interface + dev-only local runner (**not isolated**) | Jatin |
+| `src/nightshift/pipeline/` | `core.py` contract-first campaign; `run.py` baseline arm; investigator, verification | Aryesh |
+| `src/nightshift/sandbox/` | `SandboxExecutor` interface, `DockerSandbox`, Nebius-VM variant, dev-only local runner (**not isolated**) | Jatin |
+| `src/nightshift/tavily.py` | Tavily Search/Extract with receipts, credit ledger and air gap | Jatin |
 | `src/nightshift/report.py` | `report.json` contract (schema v1) | shared |
 | `samples/report.json` | **Fake** report for building the dashboard | Ruchir |
 
 ## Status
 🚧 Under active development.
 
-## Campaign modes
-
-The CLI defaults to `--mode core`. The repaired original pipeline remains available as
-`--mode baseline`. Legacy Python calls that omit `mode` retain Baseline behavior;
-select `RunConfig(..., mode="core")` or pass `mode="core"` to `run_nightshift` for Core.
-
+## Running a campaign
 ```bash
-uv run nightshift run https://github.com/ORG/REPO --package PACKAGE --mode core --airgapped --budget 1
-uv run nightshift run https://github.com/ORG/REPO --package PACKAGE --mode baseline --airgapped --budget 1
+uv run nightshift run https://github.com/ORG/REPO --package PACKAGE --budget 1 --sandbox docker
 ```
+Two modes share one `report.json` schema (v1):
+- `--mode core` (default): the contract-first pipeline from TEAM.md v2. Lightning writes contracts from docs only, then adapters + Hypothesis strategies from the frozen contract and source. Super approves the adapter without seeing function bodies, then plays detective on each failure with a fixed tool set (control input, doc/source inspection, boundary neighbourhood, known-issue search) and may answer `unresolved`. Every candidate gets 3 fresh-process replays.
+- `--mode baseline`: the original one-prompt + passive-judge pipeline, kept only as the comparison arm of the PBT-Bench benchmark.
 
-Core derives frozen `roundtrip`/`equivalent` contracts from pinned README text, public
-signatures and docstrings. Function bodies, decorators and executable default expressions
-are excluded from that context. `--doc-path docs/versioned-guide.md` selects
-approved text paths. A separate Lightning context receives the frozen contract and source
-to generate adapters and constructive strategies; Super approves the mapping without the
-target bodies. Controller-owned `run_contract` checks execution fidelity and allows one
-bounded harness repair without changing the claim.
+Useful flags: `--doc-path docs/guide.md` (repeatable; which files count as documentation), `--max-examples 200`, `--ultra-review --ultra-budget 0.02` (optional, separately capped root-cause review of survivors; never needed for a finding), `--airgapped` (no external retrieval, not even from cache; use for benchmark runs).
 
-Core uses fixed model roles: Lightning for contracts/strategies, Super for adapter review
-and active refutation. Each candidate receives three fresh-process replays. The investigator
-has six total tool calls, three runtime experiments and two known-issue searches. It can
-inspect allowlisted source, run literal-safe controls, test a bounded neighborhood and
-request known-issue research. Acceptance requires matching replays, a passing control and
-documentation inspection. Rejected and unresolved candidates remain visible.
+Each run writes `runs/<run_id>/`: `report.json`, `contracts.json`, `harnesses/`, `findings/<id>/{repro.py,discovery.py}`, `investigations/`, `rejected.json`, `unresolved.json`, `executions.json`, `environment.json`. Findings stay `ai_reviewed` until a human validates them; nothing in the code marks a finding `human_validated` or `maintainer_confirmed`.
 
-External retrieval is opt-in with `--online-lookup` and `TAVILY_API_KEY`. Tavily Search and
-Extract use explicit depths, `include_usage=True`, content hashes, request IDs and live/cache
-receipts. Documentation extraction accepts commit-pinned GitHub URLs with matching local
-evidence; unversioned search snippets cannot become contract evidence. Known-issue leads
-remain uncertain until their applicability is checked. `--tavily-credits` sets a separate
-ledger cap up to 1,000 credits. Reuse an injected Tavily client/ledger to share a cap across
-multiple campaigns. Unknown charges remain estimated/pending.
+## Sandboxes
+Generated code only ever runs through a `SandboxExecutor` (`src/nightshift/sandbox/base.py`).
+- `--sandbox docker` (default) needs a running Docker engine. The first run builds `nightshift-runtime:py312-v1` (Python 3.12, git, pytest, Hypothesis). `prepare` clones and installs with network access, commits a checkpoint image, and every `fork` runs from that image with `--network none`, no host mounts, no credentials, dropped capabilities, and CPU/memory/pids/file-size/output limits.
+- `--sandbox nebius` is the same executor talking to a Docker engine on a Nebius VM: set `NIGHTSHIFT_NEBIUS_DOCKER_HOST=ssh://user@vm`. It is not the Token Factory managed-sandbox API.
+- `UnsafeLocalSandbox` is for tests and the stdlib only. It is not isolated.
 
-`--airgapped` overrides online lookup and blocks retrieval caches too. Use it with frozen,
-agent-approved documentation for controlled benchmark discovery. Mode selection alone
-does not freeze the matched task, prompt, model, budget and cache configuration required
-for the Research Section 16.2 comparison; Baseline preserves its existing routing policy.
-
-Ultra is off by default. `--ultra-review --ultra-budget 0.02` enables a separately capped
-survivor review. Unavailability or failed patch validation cannot erase a valid finding.
-It does not grant human/maintainer validation or claim complete patch correctness.
-
-Both modes emit shared schema v1. Core also writes contracts, adapter approvals, full
-wrapper hashes, actual body/assertion counts (including shrink/replay), an execution
-manifest, investigation/replay receipts, rejected/unresolved logs, model accounting and
-Tavily ledgers under `runs/<run_id>/`. Each Core run receives a distinct response-cache
-namespace unless an explicit `RunConfig.cache_namespace` is supplied.
-
-`nightshift run` writes schema v1 reports. Findings remain AI-reviewed candidates until a
-human validates them; the legacy `bugs`/`verified` fields are compatibility views of repro
-checks. Patches are optional candidates checked against the unchanged discovery test and
-repro, protected file hashes, and a library-only diff policy. Hidden tests and a complete
-upstream test suite are not yet part of patch validation.
-
-The `docker` backend requires a running Docker engine. Its first preparation builds a
-Python 3.12 image with Git, pytest and Hypothesis. Clone/install preparation has network
-access; workers use independent filesystem checkpoints with network disabled, no host
-mounts or application credentials, and CPU/memory/process/time/output limits.
-`--sandbox nebius` uses Docker on a provisioned Nebius VM: set
-`NIGHTSHIFT_NEBIUS_DOCKER_HOST=ssh://user@your-nebius-vm`. It has no local fallback and does
-not implement the native Nebius/Contree managed sandbox API.
-
-The model client reserves a conservative UTF-8 byte bound for supported text requests.
-Each retry receives its own reservation. Missing usage, ambiguous transport failures and
-malformed responses remain pending in the report's accounting ledger. Provider rates and
-tokenizer/template assumptions still require verification; over-bound usage blocks
-further calls for reconciliation.
+## Tavily
+Retrieval is opt-in: `--online-lookup` plus `TAVILY_API_KEY`. Each run has its own credit ledger (`--tavily-credits`, default 100 of the 1,000 free credits/month; overage is never enabled). Documentation is extracted from GitHub at the pinned commit and only becomes contract evidence when its text matches the local file. Known-issue search is limited to the repo's own issues/releases and produces a lead to check, never a "new bug" or "known bug" verdict. Every request leaves a receipt (URL, content hash, request id, credits, live/cache).
 
 ## Team
 - [@Aryesh22](https://github.com/Aryesh22)

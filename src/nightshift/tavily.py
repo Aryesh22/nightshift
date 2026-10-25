@@ -163,7 +163,11 @@ class TavilyClient:
             receipts = []
             failures = list(data.get("failed_results") or [])
             for item in data["results"]:
-                url = public_url(item["url"])
+                try:
+                    url = public_url(str(item.get("url", "")))
+                except ValueError as exc:
+                    failures.append({"url": item.get("url"), "error": str(exc)})
+                    continue
                 if endpoint == "extract" and url not in body["urls"]:
                     failures.append({"url": url, "error": "extraction URL was not in the approved request"})
                     continue

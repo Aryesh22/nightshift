@@ -44,7 +44,7 @@ def main(argv: list[str] | None = None) -> None:
     run.add_argument("--mode", choices=("core", "baseline"), default="core")
     run.add_argument("--airgapped", action="store_true", help="disable external evidence and issue retrieval, including caches")
     run.add_argument("--online-lookup", action="store_true", help="enable bounded Tavily documentation/known-issue retrieval")
-    run.add_argument("--tavily-credits", type=float, default=1000)
+    run.add_argument("--tavily-credits", type=float, default=100, help="Tavily credit cap for this run (max 1000)")
     run.add_argument("--doc-path", action="append", help="approved documentation path inside the pinned checkout (repeatable)")
     run.add_argument("--max-examples", type=int, default=200)
     run.add_argument("--ultra-review", action="store_true", help="optional capped survivor review; never needed for a finding")

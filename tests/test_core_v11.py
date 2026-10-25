@@ -441,7 +441,7 @@ async def test_live_receipts_bind_versioned_docs_and_known_issue_tools(core_repo
     assert finding["contract"]["evidence"][0]["source"] == url
     assert finding["contract"]["evidence"][0]["retrieved"].startswith("live")
     assert finding["known_behaviour"]["outcome"] == "related_issue"
-    assert payload["stats"]["tavily_credits"] == 4
+    assert payload["stats"]["tavily_credits"] == 3  # docs extract + issue search + issue extract
     assert any(r["version_match"] and r["source_version"] == revision for r in payload["retrieval_receipts"])
 
 
@@ -470,7 +470,7 @@ def test_unsafe_literals_and_private_retrieval_urls_are_rejected():
             public_url(value)
 
 
-def test_cli_defaults_to_core_and_legacy_api_defaults_to_baseline(tmp_path, monkeypatch):
+def test_cli_and_run_config_default_to_core(tmp_path, monkeypatch):
     from nightshift import cli
     seen = []
     class Client:
@@ -488,7 +488,7 @@ def test_cli_defaults_to_core_and_legacy_api_defaults_to_baseline(tmp_path, monk
     cli.main(['run', 'file:///unused', '--package', 'reviewlib', '--airgapped'])
     cli.main(['run', 'file:///unused', '--package', 'reviewlib', '--mode', 'baseline'])
     assert [c.mode for c in seen] == ['core', 'baseline']
-    assert seen[0].airgapped and RunConfig('file:///unused', 'reviewlib').mode == 'baseline'
+    assert seen[0].airgapped and RunConfig('file:///unused', 'reviewlib').mode == 'core'
 
 
 @respx.mock

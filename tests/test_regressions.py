@@ -1,4 +1,5 @@
-"""Independent probes of the pasted audit; assertions express required behavior.
+"""Regression tests for the review of PR #1: harness fidelity, patch policy, budget
+accounting, and the baseline pipeline's failure handling.
 
 Only trusted, locally authored fixtures execute. HTTP requests use MockTransport.
 """
@@ -75,7 +76,7 @@ def relation(family, apis):
                     'Preserve the documented input relation', EVIDENCE)
 
 
-async def test_F01_roundtrip_uses_original_expected_value(tmp_path):
+async def test_roundtrip_uses_original_expected_value(tmp_path):
     contract = relation('roundtrip', ('trusted_probe.encode', 'trusted_probe.decode'))
     harness = Harness('import trusted_probe\ndef forward(x):\n    return trusted_probe.encode(x)\n'
                       'def backward(y):\n    return trusted_probe.decode(y)\n',
@@ -86,7 +87,7 @@ async def test_F01_roundtrip_uses_original_expected_value(tmp_path):
     assert out.kind == 'violation', (out.kind, out.stats)
 
 
-async def test_F02_equivalent_calls_start_from_independent_equal_inputs(tmp_path):
+async def test_equivalent_calls_start_from_independent_equal_inputs(tmp_path):
     contract = relation('equivalent', ('trusted_probe.pop_a', 'trusted_probe.pop_b'))
     harness = Harness('import trusted_probe\ndef call_a(x):\n    return trusted_probe.pop_a(x)\n'
                       'def call_b(x):\n    return trusted_probe.pop_b(x)\n',
@@ -97,7 +98,7 @@ async def test_F02_equivalent_calls_start_from_independent_equal_inputs(tmp_path
     assert out.kind == 'passed', (out.kind, out.stats)
 
 
-async def test_F03_adapter_name_error_is_not_a_bug_candidate(tmp_path):
+async def test_adapter_name_error_is_not_a_bug_candidate(tmp_path):
     harness = Harness('def forward(x):\n    return missing_helper(x)\n'
                       'def backward(y):\n    return y\n', BASE64_HARNESS.strategy_source)
     out = await campaign(tmp_path, BASE64_ROUNDTRIP, harness)
@@ -116,7 +117,7 @@ async def test_F03_adapter_name_error_is_not_a_bug_candidate(tmp_path):
     assert early.stats['api_calls']['trusted_probe.decode'] == 0
 
 
-async def test_F04_untracked_apis_cannot_authorize_a_pass(tmp_path):
+async def test_untracked_apis_cannot_authorize_a_pass(tmp_path):
     contract = relation('roundtrip', ('builtins.str.lower', 'builtins.str.casefold'))
     harness = Harness('def forward(x):\n    return x\ndef backward(y):\n    return y\n',
                       "def inputs():\n    return st.text(alphabet='ab', max_size=10)\n")
@@ -124,7 +125,7 @@ async def test_F04_untracked_apis_cannot_authorize_a_pass(tmp_path):
     assert out.kind != 'passed', (out.kind, out.stats)
 
 
-async def test_F04_discarding_both_api_results_is_not_faithful(tmp_path):
+async def test_discarding_both_api_results_is_not_faithful(tmp_path):
     harness = Harness('import base64\ndef forward(x):\n    base64.b64encode(x)\n    return x\n'
                       "def backward(y):\n    base64.b64decode(b'')\n    return y\n",
                       BASE64_HARNESS.strategy_source)
@@ -151,14 +152,14 @@ async def confirmation(tmp_path, payload):
         await sandbox.close(base)
 
 
-async def test_F05_import_error_does_not_verify_the_semantic_repro(tmp_path):
+async def test_import_error_does_not_verify_the_semantic_repro(tmp_path):
     payload = report_payload('import definitely_missing_nightshift_audit_dependency\nassert True\n',
                              'not a valid diff')
     bug = await confirmation(tmp_path, payload)
     assert bug is None or not bug.repro_verified, bug
 
 
-async def test_F06_patch_cannot_replace_its_own_test(tmp_path):
+async def test_patch_cannot_replace_its_own_test(tmp_path):
     payload = report_payload('from checkedlib import value\nassert value() == 1\n',
                              '--- a/nightshift_repro.py\n+++ b/nightshift_repro.py\n'
                              '@@ -1,2 +1 @@\n-from checkedlib import value\n'
@@ -181,7 +182,7 @@ def completion(usage=None):
     return result
 
 
-async def test_F07_reservation_bounds_actual_settlement(tmp_path):
+async def test_reservation_bounds_actual_settlement(tmp_path):
     client = http_client(tmp_path, lambda r: httpx.Response(200, json=completion(
         {'prompt_tokens': 600, 'completion_tokens': 1})), limit=0.0004)
     try:
@@ -196,7 +197,7 @@ async def test_F07_reservation_bounds_actual_settlement(tmp_path):
         await client.aclose()
 
 
-async def test_F07_missing_usage_retains_estimated_or_pending_cost(tmp_path):
+async def test_missing_usage_retains_estimated_or_pending_cost(tmp_path):
     client = http_client(tmp_path, lambda r: httpx.Response(200, json=completion()))
     try:
         await client.chat('lightning', [{'role': 'user', 'content': 'hello'}], stage='audit', max_tokens=10)
@@ -213,7 +214,7 @@ async def test_F07_missing_usage_retains_estimated_or_pending_cost(tmp_path):
         await malformed.aclose()
 
 
-async def test_F07_read_timeout_retains_potential_charge(tmp_path):
+async def test_read_timeout_retains_potential_charge(tmp_path):
     def timeout(request):
         raise httpx.ReadTimeout('submitted, response unknown', request=request)
     client = http_client(tmp_path, timeout)
@@ -241,7 +242,7 @@ async def test_F07_read_timeout_retains_potential_charge(tmp_path):
         await retrying.aclose()
 
 
-async def test_F08_syntax_error_reaches_bounded_repair():
+async def test_syntax_error_reaches_bounded_repair():
     invalid = 'from hypothesis import given, strategies as st\n@given(st.integers())\ndef test_property(x)\n    pass\n'
     valid = invalid.replace('def test_property(x)\n', 'def test_property(x):\n')
     client = ScriptedClient([{'test_code': invalid}, {'test_code': valid}])
@@ -257,7 +258,7 @@ class NoExecutionSandbox:
         pass
 
 
-async def test_F09_finished_work_survives_sibling_budget_exhaustion(tmp_path, monkeypatch):
+async def test_finished_work_survives_sibling_budget_exhaustion(tmp_path, monkeypatch):
     run_module = importlib.import_module('nightshift.pipeline.run')
     target2 = Target('t2', 'checkedlib.other', '()', 'other', 'invariant')
 
@@ -278,13 +279,13 @@ async def test_F09_finished_work_survives_sibling_budget_exhaustion(tmp_path, mo
     monkeypatch.setattr(run_module, 'source_revision', fake_revision)
     monkeypatch.setattr(run_module, 'extract_targets', fake_extract)
     monkeypatch.setattr(run_module, 'propose_and_run', fake_propose)
-    report = await run_nightshift(RunConfig('file:///unused', 'checkedlib', runs_dir=tmp_path,
+    report = await run_nightshift(RunConfig('file:///unused', 'checkedlib', mode='baseline', runs_dir=tmp_path,
                                           variants_per_target=1), ScriptedClient([]), NoExecutionSandbox())
     assert report['stats']['properties_proposed'] == 1 and report['stats']['failures'] == 1, report
     assert list(tmp_path.glob('*/executions.jsonl'))
 
 
-async def test_F10_unverified_source_directory_cannot_be_a_cache_hit(tmp_path):
+async def test_unverified_source_directory_cannot_be_a_cache_hit(tmp_path):
     dest = tmp_path / 'cache'
     dest.mkdir()
     (dest / 'unrelated-marker').write_text('not a checkout')
@@ -295,7 +296,7 @@ async def test_F10_unverified_source_directory_cannot_be_a_cache_hit(tmp_path):
     assert (result / '.git').is_dir(), result
 
 
-def test_F11_fixture_really_exhibits_its_claimed_bug(monkeypatch):
+def test_fixture_really_exhibits_its_claimed_bug(monkeypatch):
     spec = importlib.util.spec_from_file_location('review_pipeline_fixture', ROOT / 'tests/test_pipeline.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -312,11 +313,11 @@ def test_F11_fixture_really_exhibits_its_claimed_bug(monkeypatch):
 
 
 @pytest.mark.parametrize('backend', ['docker', 'nebius'])
-def test_I01_cli_backend_is_loadable(backend):
+def test_cli_backend_is_loadable(backend):
     assert load_sandbox(backend) is not None
 
 
-def test_I02_actual_report_producer_is_compatible_with_v1_consumer():
+def test_actual_report_producer_is_compatible_with_v1_consumer():
     payload = build_report('offline-run', {'name': 'checkedlib', 'repo': 'file:///local', 'ref': 'main'},
                            {'targets': 1, 'properties_proposed': 1, 'failures': 0, 'triaged_real': 0},
                            Budget(1).summary(), [], [])
@@ -335,3 +336,53 @@ async def test_control_identity_adapter_without_calls_is_vacuous(tmp_path):
                       BASE64_HARNESS.strategy_source)
     out = await campaign(tmp_path, BASE64_ROUNDTRIP, harness)
     assert out.kind == 'vacuous' and not out.is_candidate
+
+
+def test_budget_overrun_is_charged_and_recorded_not_a_permanent_block():
+    budget = Budget(1.0)
+    reservation = budget.reserve(0.01)
+    budget.settle(reservation, 0.02, tier='lightning', stage='audit')  # estimate was wrong, cap is not
+    assert budget.spent_usd == pytest.approx(0.02) and budget.reserved_usd == 0
+    assert budget.overruns == [{'tier': 'lightning', 'stage': 'audit', 'reserved_usd': 0.01, 'actual_usd': 0.02}]
+    assert budget.reserve(0.5) == 0.5  # the next call is still allowed
+    budget.release(0.5)
+    tight = Budget(0.015)
+    with pytest.raises(BudgetExceeded):
+        tight.settle(tight.reserve(0.01), 0.02, tier='lightning', stage='audit')
+    assert tight.spent_usd == pytest.approx(0.02), 'the real charge is still recorded'
+
+
+async def test_tavily_skips_a_non_https_result_instead_of_discarding_the_response():
+    from nightshift.tavily import TavilyClient
+
+    def handler(request):
+        return httpx.Response(200, json={'usage': {'credits': 1}, 'results': [
+            {'url': 'http://example.org/plain', 'content': 'insecure'},
+            {'url': 'https://example.org/docs', 'content': 'documented behaviour'}]})
+    client = TavilyClient('offline', http=httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    try:
+        result = await client.search('documented behaviour')
+    finally:
+        await client.aclose()
+    assert [r.url for r in result.receipts] == ['https://example.org/docs']
+    assert result.failures[0]['url'] == 'http://example.org/plain'
+    assert client.ledger.used == 1
+
+
+async def test_docker_run_wraps_the_command_in_timeout_and_keeps_the_environment(monkeypatch):
+    from nightshift.sandbox.base import RunResult
+    from nightshift.sandbox.docker import DockerSandbox
+
+    sandbox = DockerSandbox()
+    sandbox._envs['c1'] = {'image': 'img', 'owned_image': 'img'}
+    seen = {}
+
+    async def fake_command(*args, timeout_s=30, container=None, **kwargs):
+        seen.update(args=args, timeout_s=timeout_s, container=container)
+        return RunResult(124, '', '', 1.0)  # GNU timeout's exit status on expiry
+    monkeypatch.setattr(sandbox, '_command', fake_command)
+    result = await sandbox.run(EnvHandle('c1'), 'sleep 999', timeout_s=5)
+    assert result.timed_out and result.exit_code == 124
+    assert seen['args'][:4] == ('exec', 'c1', 'sh', '-c') and seen['args'][4].startswith('timeout -k 2 5 sh -c ')
+    assert seen['timeout_s'] == 20 and seen['container'] == 'c1'
+    assert 'c1' in sandbox._envs

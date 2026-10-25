@@ -16,7 +16,7 @@ from dataclasses import dataclass, replace
 import httpx
 
 from nightshift.config import MODELS, ModelSpec, Settings
-from nightshift.llm.budget import Budget, BudgetExceeded, cost_usd
+from nightshift.llm.budget import Budget, cost_usd
 from nightshift.llm.cache import ResponseCache, cache_key
 
 RETRYABLE_STATUS = {408, 429, 500, 502, 503, 504}
@@ -167,8 +167,7 @@ class NemotronClient:
                         attempt.update(input_tokens=result.input_tokens, output_tokens=result.output_tokens,
                                        reported_usd=result.cost_usd)
                         if result.input_tokens > input_bound or result.output_tokens > body["max_tokens"]:
-                            self.budget.blocked_reason = "provider token usage exceeded the request bound"
-                            raise BudgetExceeded(self.budget.blocked_reason)
+                            attempt["over_bound"] = True  # settle() records the overrun
                         self.budget.settle(reservation, result.cost_usd, tier=tier, stage=stage)
                         attempt.update(status="settled", cost_usd=result.cost_usd)
                 except (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout):

@@ -11,6 +11,7 @@ import os
 import shlex
 import time
 import uuid
+from dataclasses import replace
 from pathlib import PurePosixPath
 
 from nightshift.sandbox.base import EnvHandle, RunResult, SandboxError, SandboxExecutor
@@ -199,7 +200,16 @@ class DockerSandbox(SandboxExecutor):
 
     async def run(self, env: EnvHandle, cmd: str, timeout_s: float = 120.0) -> RunResult:
         self._state(env)
-        return await self._command("exec", env.id, "sh", "-c", cmd, timeout_s=timeout_s, container=env.id)
+        # `timeout` inside the container ends the command (and its children, via --init)
+        # without taking the environment with it, so a slow test on the base environment
+        # does not strand the rest of the campaign. The outer deadline is the last resort
+        # and does remove the container.
+        guarded = f"timeout -k 2 {timeout_s:g} sh -c {shlex.quote(cmd)}"
+        result = await self._command("exec", env.id, "sh", "-c", guarded,
+                                     timeout_s=timeout_s + 15, container=env.id)
+        if result.exit_code in (124, 137) and not result.timed_out:
+            return replace(result, timed_out=True)
+        return result
 
     async def close(self, env: EnvHandle) -> None:
         state = self._envs.pop(env.id, None)

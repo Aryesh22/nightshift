@@ -170,7 +170,7 @@ class RefutationTools:
                         any(p in r.url[len(prefix):] for p in ("issues/", "releases/", "CHANGELOG"))][:2]
                 extracted = await self.tavily.extract(urls) if urls else None
                 receipts = list(extracted.receipts) if extracted else []
-                outcome = "related_issue" if receipts else ("no_match_found" if not searched.receipts else "lookup_unavailable")
+                outcome = "related_issue" if receipts else "no_match_found"
                 self.result.known_behaviour = KnownBehaviour(outcome, [r.url for r in receipts],
                     "Bounded search leads; exact applicability to the tested revision still requires review.")
                 data = {"query": query, "search": [r.to_dict() for r in searched.receipts],

@@ -18,9 +18,10 @@ from nightshift.llm import BudgetExceeded
 from nightshift.pipeline.contracts_stage import (
     build_documentation, extract_contracts, generate_harness, literal_value, retrieve_documentation,
 )
-from nightshift.pipeline.investigator import failure_fingerprint, outcome_dict
+from nightshift.pipeline.investigator import (
+    RefutationTools, failure_fingerprint, investigate_candidate, outcome_dict,
+)
 from nightshift.pipeline.read import clone, source_revision
-from nightshift.pipeline.triage import RefutationTools, investigate_candidate
 from nightshift.report import ContractRef, EvidenceRef, Finding, Library, Report, Stats, write_campaign_report
 from nightshift.tavily import CreditLedger, TavilyClient
 

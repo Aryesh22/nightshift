@@ -9,14 +9,14 @@ import json
 import sys
 from pathlib import Path
 
-from nightshift.config import Settings
+from nightshift.config import API_KEY_ENV, PROVIDER, Settings
 from nightshift.llm import Budget, NemotronClient
 from nightshift.pipeline.run import RunConfig, run_nightshift
 
 # Implementations live in Jatin's workstream; see nightshift/sandbox/base.py for the contract.
 SANDBOXES = {
     "docker": "nightshift.sandbox.docker:DockerSandbox",
-    "nebius": "nightshift.sandbox.nebius:NebiusContreeSandbox",
+    "nebius": "nightshift.sandbox.nebius:NebiusDockerSandbox",
 }
 
 
@@ -41,11 +41,19 @@ def main(argv: list[str] | None = None) -> None:
     run.add_argument("--variants", type=int, default=2)
     run.add_argument("--budget", type=float, help="hard USD cap for this run")
     run.add_argument("--sandbox", choices=sorted(SANDBOXES), default="docker")
+    run.add_argument("--mode", choices=("core", "baseline"), default="core")
+    run.add_argument("--airgapped", action="store_true", help="disable external evidence and issue retrieval, including caches")
+    run.add_argument("--online-lookup", action="store_true", help="enable bounded Tavily documentation/known-issue retrieval")
+    run.add_argument("--tavily-credits", type=float, default=1000)
+    run.add_argument("--doc-path", action="append", help="approved documentation path inside the pinned checkout (repeatable)")
+    run.add_argument("--max-examples", type=int, default=200)
+    run.add_argument("--ultra-review", action="store_true", help="optional capped survivor review; never needed for a finding")
+    run.add_argument("--ultra-budget", type=float, default=0.02)
     args = parser.parse_args(argv)
 
     settings = Settings.from_env()
     if not settings.api_key:
-        sys.exit("NEBIUS_API_KEY is not set (copy .env.example to .env).")
+        sys.exit(f"{API_KEY_ENV[PROVIDER]} is not set (copy .env.example to .env).")
     budget = Budget(args.budget if args.budget is not None else settings.budget_usd)
     config = RunConfig(
         repo_url=args.repo_url,
@@ -55,6 +63,14 @@ def main(argv: list[str] | None = None) -> None:
         max_targets=args.max_targets,
         variants_per_target=args.variants,
         runs_dir=Path(settings.runs_dir),
+        mode=args.mode,
+        airgapped=args.airgapped,
+        online_lookup=args.online_lookup,
+        tavily_credits=args.tavily_credits,
+        doc_paths=tuple(args.doc_path or ["README.md"]),
+        max_examples=args.max_examples,
+        ultra_review=args.ultra_review,
+        ultra_budget_usd=args.ultra_budget,
     )
 
     async def go() -> dict:

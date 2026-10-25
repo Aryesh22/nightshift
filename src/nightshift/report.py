@@ -7,7 +7,7 @@ dashboard, so tell Ruchir first and regenerate samples/report.json in the same P
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 from typing import Literal
 
@@ -140,10 +140,13 @@ class Report:
 
     @classmethod
     def from_dict(cls, d: dict) -> Report:
+        if d.get("schema_version") != SCHEMA_VERSION:
+            raise ValueError("report must use schema v1")
         return cls(
             run_id=d["run_id"],
             library=Library(**d["library"]),
-            stats=Stats(**d.get("stats", {})),
+            stats=Stats(**{k: v for k, v in d.get("stats", {}).items()
+                           if k in {f.name for f in fields(Stats)}}),
             cost_by_model=d.get("cost_by_model", {}),
             findings=[_finding(f) for f in d.get("findings", [])],
         )
@@ -151,6 +154,83 @@ class Report:
     @classmethod
     def load(cls, path: Path | str) -> Report:
         return cls.from_dict(json.loads(Path(path).read_text()))
+
+
+def build_campaign_report(run_id, library, stats, budget_summary, bugs, router_summary,
+                          stopped_reason=None, *, targets=(), verdicts=(), failures=()):
+    """Canonical v1 producer, with deprecated v0 views for existing callers.
+
+    Repro verification is never human validation. Source-informed legacy claims
+    remain explicitly inferred; these records do not pretend to be docs-only contracts.
+    """
+    from nightshift.contracts.model import sha256_text
+
+    by_id = {t.id: t for t in targets}
+    by_name = {t.qualname: t for t in targets}
+    findings = []
+    accepted = {b.target for b in bugs}
+    for bug in bugs:
+        target = by_name.get(bug.target)
+        claim = target.claim if target else bug.property
+        contract = ContractRef(
+            contract_id=f"legacy.{target.id if target else bug.target}", version=1,
+            hash=sha256_text(claim), family=bug.property, claim=claim, status="inferred",
+            evidence=[EvidenceRef("repository documentation/source", target.evidence, "manual")]
+                     if target and target.evidence else [],
+        )
+        validation = getattr(bug, "verification", {})
+        receipts = validation.get("replays", [])
+        findings.append(Finding(
+            id=bug.id, title=bug.title, status="ai_reviewed" if bug.repro_verified else "unresolved",
+            contract=contract, repro=bug.repro, actual=bug.traceback, expected=claim,
+            traceback=bug.traceback, root_cause=bug.root_cause, patch_diff=bug.patch_diff or None,
+            patch_validation=validation.get("patch_scope", "patch not validated"),
+            replays_passed=sum(r.get("matched", False) for r in receipts), replays_attempted=len(receipts),
+            uncertainty="Legacy source-informed claim; no human validation or docs-only contract approval.",
+            route_trace=[RouteStep(s.stage, s.model, s.thinking, s.cost_usd) for s in bug.route_trace],
+        ))
+    judged = {v.property_id: v for v in verdicts}
+    for prop, execution in failures:
+        target = by_id.get(prop.target_id)
+        if target and target.qualname in accepted:
+            continue
+        verdict = judged.get(prop.id)
+        rejected = verdict is not None and verdict.verdict == "bad_test"
+        reason = verdict.reason if verdict else stopped_reason or "investigation incomplete"
+        findings.append(Finding(
+            id=f"candidate.{prop.id}", title=f"Unconfirmed anomaly: {target.qualname if target else prop.target_id}",
+            status="rejected" if rejected else "unresolved",
+            contract=ContractRef(f"legacy.{prop.target_id}", 1, sha256_text(target.claim if target else ""),
+                                 target.kind if target else "invariant", target.claim if target else "", "inferred"),
+            repro=prop.code, actual=execution.output, expected=target.claim if target else "",
+            uncertainty=reason, rejection_reason=reason if rejected else None,
+        ))
+    report = Report(
+        run_id, Library(library["name"], library.get("version", library.get("ref", "unknown")), library.get("repo")),
+        Stats(contracts=stats.get("targets", 0), campaigns=stats.get("properties_proposed", 0),
+              infra_failures=stats.get("infra_failures", 0), cost_usd=budget_summary["spent_usd"]),
+        cost_by_model=budget_summary["by_tier"], findings=findings,
+    ).to_dict()
+    verified = sum(b.repro_verified for b in bugs)
+    spent = budget_summary["spent_usd"]
+    report["stats"].update(stats, verified=verified,
+                           cost_per_verified_bug=round(spent / verified, 4) if verified else None)
+    report.update(bugs=[asdict(b) for b in bugs], routing=router_summary,
+                  cost_by_stage=budget_summary["by_stage"], stopped_reason=stopped_reason,
+                  accounting=budget_summary,
+                  compatibility_note="bugs/verified are deprecated repro-only views; use findings/status_counts")
+    return report
+
+
+def write_campaign_report(run_dir: Path, report: dict) -> Path:
+    payload = json.dumps(report, indent=2) + "\n"
+    Report.from_dict(json.loads(payload))
+    run_dir.mkdir(parents=True, exist_ok=True)
+    path = run_dir / "report.json"
+    temporary = path.with_suffix(".json.tmp")
+    temporary.write_text(payload)
+    temporary.replace(path)
+    return path
 
 
 def _finding(f: dict) -> Finding:

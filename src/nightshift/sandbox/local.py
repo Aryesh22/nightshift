@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import shlex
 import shutil
 import tempfile
 import time
@@ -17,11 +18,13 @@ from pathlib import Path
 
 from nightshift.sandbox.base import EnvHandle, RunResult, SandboxError, SandboxExecutor
 
-SECRET_ENV_PREFIXES = ("NEBIUS_", "TAVILY_", "OPENAI_", "ANTHROPIC_", "NIGHTSHIFT_")
+SECRET_ENV_PREFIXES = ("NEBIUS_", "TAVILY_", "OPENAI_", "OPENROUTER_", "ANTHROPIC_", "NIGHTSHIFT_")
 
 
 def clean_env() -> dict[str, str]:
-    return {k: v for k, v in os.environ.items() if not k.startswith(SECRET_ENV_PREFIXES)}
+    env = {k: v for k, v in os.environ.items() if not k.startswith(SECRET_ENV_PREFIXES)}
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    return env
 
 
 class UnsafeLocalSandbox(SandboxExecutor):
@@ -32,7 +35,8 @@ class UnsafeLocalSandbox(SandboxExecutor):
         if repo_url and Path(repo_url).is_dir():
             shutil.copytree(repo_url, workdir, dirs_exist_ok=True)
         elif repo_url:
-            setup_cmds = [f"git clone -q --depth 1 --branch {ref} {repo_url} ."] + list(setup_cmds)
+            setup_cmds = [f"git clone -q --no-checkout -- {shlex.quote(repo_url)} .",
+                          f"git checkout -q --detach {shlex.quote(ref)}"] + list(setup_cmds)
         for cmd in setup_cmds:
             result = await self.run(env, cmd, timeout_s=600)
             if result.exit_code != 0:

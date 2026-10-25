@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -36,23 +37,70 @@ class SourceIndex:
         return hits[0] if len(hits) == 1 else ("", "")
 
 
-async def clone(repo_url: str, ref: str, dest: Path) -> Path:
-    if dest.exists():
-        return dest
-    dest.parent.mkdir(parents=True, exist_ok=True)
+async def _git(*args: str, cwd: Path | None = None) -> str:
     proc = await asyncio.create_subprocess_exec(
-        "git", "clone", "--depth", "1", "--branch", ref, repo_url, str(dest),
+        "git", *args, cwd=cwd,
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
     )
-    _, err = await proc.communicate()
+    try:
+        out, err = await asyncio.wait_for(proc.communicate(), 60)
+    except (TimeoutError, asyncio.CancelledError):
+        proc.kill()
+        await proc.wait()
+        raise
     if proc.returncode != 0:
-        raise RuntimeError(f"git clone failed: {err.decode()[-500:]}")
+        raise RuntimeError(f"source Git operation failed: {err.decode()[-500:]}")
+    return out.decode().strip()
+
+
+def _origin_identity(url: str) -> str:
+    if url.startswith("file://"):
+        return str(Path(url[7:]).resolve())
+    if "://" not in url and Path(url).exists():
+        return str(Path(url).resolve())
+    return url.rstrip("/").removesuffix(".git")
+
+
+async def source_revision(repo: Path) -> str:
+    return await _git("rev-parse", "--verify", "HEAD^{commit}", cwd=repo)
+
+
+async def clone(repo_url: str, ref: str, dest: Path) -> Path:
+    """Validate the origin and resolve one immutable revision on every cache reuse."""
+    if not ref or ref.startswith("-"):
+        raise ValueError("a non-option Git ref is required")
+    if dest.exists():
+        if not (dest / ".git").is_dir():
+            raise ValueError("source cache is not a complete Git checkout")
+        top = await _git("rev-parse", "--show-toplevel", cwd=dest)
+        origin = await _git("remote", "get-url", "origin", cwd=dest)
+        if Path(top).resolve() != dest.resolve() or _origin_identity(origin) != _origin_identity(repo_url):
+            raise ValueError("source cache repository identity does not match the request")
+        if await _git("status", "--porcelain", "--untracked-files=all", cwd=dest):
+            raise ValueError("source cache is dirty or incomplete")
+    else:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        await _git("clone", "--no-checkout", "--depth", "1", "--", repo_url, str(dest))
+    if re.fullmatch(r"[0-9a-fA-F]{40}", ref):
+        revision = ref.lower()
+    else:
+        refs = await _git("ls-remote", "--exit-code", repo_url,
+                          f"refs/heads/{ref}", f"refs/tags/{ref}", f"refs/tags/{ref}^{{}}")
+        matches = {name: sha for sha, name in (line.split() for line in refs.splitlines())}
+        revision = (matches.get(f"refs/heads/{ref}") or matches.get(f"refs/tags/{ref}^{{}}")
+                    or matches.get(f"refs/tags/{ref}"))
+        if not revision:
+            raise ValueError("requested revision could not be resolved")
+    await _git("fetch", "--depth", "1", "origin", revision, cwd=dest)
+    await _git("checkout", "--detach", revision, cwd=dest)
+    if await source_revision(dest) != revision:
+        raise ValueError("source cache resolved to the wrong commit")
     return dest
 
 
 def _package_root(repo: Path, package: str) -> Path:
     for candidate in (repo / "src" / package, repo / package):
-        if candidate.is_dir():
+        if candidate.is_dir() and candidate.resolve().is_relative_to(repo.resolve()):
             return candidate
     raise FileNotFoundError(f"package {package!r} not found under {repo} or {repo / 'src'}")
 
@@ -61,6 +109,8 @@ def index_functions(repo: Path, package: str) -> SourceIndex:
     root = _package_root(repo, package)
     functions: dict[str, tuple[str, str]] = {}
     for path in sorted(root.rglob("*.py")):
+        if not path.resolve().is_relative_to(repo.resolve()):
+            continue
         if SKIP_DIRS & set(path.relative_to(root).parts):
             continue
         text = path.read_text(errors="replace")

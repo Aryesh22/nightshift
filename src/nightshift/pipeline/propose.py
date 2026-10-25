@@ -21,7 +21,7 @@ def parse_test(payload: dict) -> str:
     code = payload["test_code"]
     if not isinstance(code, str) or "def test_property" not in code or "@given" not in code:
         raise ValueError("test must define test_property decorated with @given")
-    compile(code, "test_property.py", "exec")  # SyntaxError is a ValueError subclass
+    compile(code, "test_property.py", "exec")  # Parse failures enter the bounded repair cascade.
     return code
 
 

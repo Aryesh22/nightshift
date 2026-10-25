@@ -180,7 +180,7 @@ async def run_core(config, client, sandbox, *, tavily=None):
                         finding = Finding(identifier, contract.claim, "raw_anomaly",
                             ContractRef(contract.contract_id, contract.version, contract.hash, contract.family,
                                         contract.claim, contract.status,
-                                        [EvidenceRef(e.source, e.excerpt, e.retrieved) for e in contract.evidence]),
+                                        [EvidenceRef(e.source, e.excerpt, e.retrieved, getattr(e, "content_hash", "")) for e in contract.evidence]),
                             repro=code, actual=failure.get("actual", failure.get("error", outcome.reason)),
                             expected=failure.get("expected", contract.claim))
                         finding.route_trace.extend([*extraction_trace, *strategy_trace])

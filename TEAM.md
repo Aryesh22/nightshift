@@ -35,23 +35,24 @@ We changed the plan after the research review in `NIGHTSHIFT_RESEARCH.md`. In on
 ## Timeline and tasks
 Tick the boxes as you go.
 
-### Phase 1: Foundations (Oct 19–21)
+### Phase 1: Foundations (Oct 19–21) [COMPLETE]
 - [x] **Aryesh:** repo, `uv`, Nemotron client (cache, cost meter, hard $ cap), sandbox + report contracts
 - [x] **Aryesh:** contract format, controller-owned test wrapper, adapter audit, first contract/adapter pair (`base64` round trip)
-- [ ] **Aryesh:** move `pipeline/` onto contracts + `report.json` v1 (it still writes v0 and uses the old learned router)
-- [ ] **Aryesh:** get the Nebius API key, then run `scripts/check_models.py --ping`. Confirm model IDs and which reasoning controls actually work.
-- [ ] **Jatin:** request Sandbox beta access **today**. Build `DockerSandbox` (no secrets inside, CPU/memory/time limits). Get a Tavily key.
-- [ ] **Ruchir:** Next.js skeleton using `samples/report.json`, plus the finding card layout (the 5 questions below)
-- [ ] **Ruchir + Aryesh:** preflight **2 PBT-Bench tasks** through its evaluator, then write down the rules for choosing the 10 tasks *before* running Nightshift
+- [x] **Aryesh:** move `pipeline/` onto contracts + `report.json` v1 (it still writes v0 and uses the old learned router)
+- [x] **Aryesh:** get the Nebius API key, then run `scripts/check_models.py --ping`. Confirm model IDs and which reasoning controls actually work.
+- [x] **Jatin:** request Sandbox beta access **today**. Build `DockerSandbox` (no secrets inside, CPU/memory/time limits). Get a Tavily key.
+- [x] **Ruchir:** Next.js skeleton using `samples/report.json`, plus the finding card layout (the 5 questions below)
+- [x] **Ruchir + Aryesh:** preflight **2 PBT-Bench tasks** through its evaluator, then write down the rules for choosing the 10 tasks *before* running Nightshift
 
-### Phase 2: Working slice (Oct 22–23)
-- [ ] **Aryesh:** Lightning writes contracts from docs only and strategies from the contract + source. Add API-pair hints (names, signatures, existing tests). Build the Super investigator with a refutation checklist that may answer `unresolved`.
-- [ ] **Jatin:** Tavily Search + Extract for versioned docs (store URL, excerpt, hash, credits). Add the 3-replay fresh-process runner, the shrinking pass, and the investigator tools (`run_control_input`, `inspect_doc_and_source`, `check_boundary_neighborhood`, `search_known_issues_tavily`).
-- [ ] **Ruchir:** finding cards, a "Documentation evidence" view, a "Checks we ran" view, a rejected-findings view, and a cost view
-- [ ] **Ruchir:** pick the 10 PBT-Bench tasks (4 L1, 4 L2, 2 L3). Hide answers, fixes and defect notes from the agent.
+### Phase 2: Working slice (Oct 22–23) [COMPLETE]
+- [x] **Aryesh:** Lightning writes contracts from docs only and strategies from the contract + source. Add API-pair hints (names, signatures, existing tests). Build the Super investigator with a refutation checklist that may answer `unresolved`.
+- [x] **Jatin:** Tavily Search + Extract for versioned docs (store URL, excerpt, hash, credits). Add the 3-replay fresh-process runner, the shrinking pass, and the investigator tools (`run_control_input`, `inspect_doc_and_source`, `check_boundary_neighborhood`, `search_known_issues_tavily`).
+- [x] **Ruchir:** finding cards, a "Documentation evidence" view, a "Checks we ran" view, a rejected-findings view, and a cost view
+- [x] **Ruchir:** pick the 10 PBT-Bench tasks (4 L1, 4 L2, 2 L3). Hide answers, fixes and defect notes from the agent.
 
 ### Phase 3: Real hunting + benchmark (Oct 24–25)
-- [ ] **Aryesh:** fix the generation/triage failures we observe. Build the **baseline** variant (one prompt + passive judge) for the comparison.
+- [x] **Aryesh:** fix the generation/triage failures we observe. Build the **baseline** variant (one prompt + passive judge) for the comparison.
+- [x] **Jatin:** Paired evaluation harness (`eval.py`, `run_evaluation.py`) with exact v1.1 metrics, `--self-test` mode, and sample report v1.1 upgrades.
 - [ ] **Jatin:** campaigns on **1–3 prepared real packages**. Known-issue search on survivors.
 - [ ] **Ruchir + Aryesh:** run the **20-campaign comparison** (cap $10). Record every cost, failure and denominator.
 - [ ] **ALL:** a human reproduces every survivor. File genuine ones **by Oct 25–26** (be polite, mention AI assistance).
@@ -62,6 +63,36 @@ Tick the boxes as you go.
 - [ ] **Jatin:** product feedback write-up (Token Factory, Sandboxes, Nemotron, Tavily). Setup instructions in the README.
 - [ ] **Ruchir:** 3-min video, Devpost write-up, architecture diagram
 - [ ] **ALL (Oct 29):** final checklist: repo **public**, license visible, demo live until Dec 15, video public, submit
+
+## Key CLI Commands
+
+### 1. Run Nightshift Core Bug-Hunting Pipeline
+Run the autonomous contract-first bug hunter in isolated Docker containers:
+```bash
+python -m nightshift.cli run <repo_url> --package <pkg> --mode core --sandbox docker
+```
+Common options:
+- `--online-lookup`: Enable bounded Tavily documentation extraction & known-issue search.
+- `--airgapped`: Disable external lookups and cache retrieval (required for benchmark tasks).
+- `--budget 2.0`: Hard USD ceiling for the campaign.
+- `--doc-path docs/api.rst`: Include specific documentation files from checkout.
+
+### 2. Run Paired Evaluation Harness
+Run matched-budget paired comparison (Baseline vs. Nightshift Core) under airgapped Tavily:
+```bash
+# Fast offline self-test (0 API spend, runs in milliseconds with toycodec):
+python scripts/run_evaluation.py --self-test
+
+# Benchmark evaluation across a task manifest:
+python scripts/run_evaluation.py --manifest tasks.json --sandbox docker --output-md runs/evaluation/summary.md
+```
+Metrics computed and formatted in JSON & Markdown:
+- `report_precision` (unique validated findings / reports reviewed)
+- `known_defect_recall` (known defects exposed / defects evaluated)
+- `false_positive_rate` (negative candidates incorrectly retained)
+- `cost_per_validated_finding` (None if 0 findings)
+- `valid_input_rate` (reach rate / valid inputs tested)
+- `tavily_credits` (0.0 airgapped verified)
 
 ## Every finding card answers 5 questions
 1. What documented behaviour seems broken? (with the doc link + excerpt)

@@ -204,6 +204,8 @@ def test_contract():
     try:
         _property()
     finally:
+        _STATS["body_entries"] = _STATS["entered"]
+        _STATS["assertions_reached"] = _STATS["assertion_reached"]
         print("\\n{marker}" + json.dumps(_STATS, default=repr), flush=True)
 '''
 

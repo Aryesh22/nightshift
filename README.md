@@ -45,6 +45,55 @@ uv run pytest                                 # run the tests (no API key needed
 ## Status
 🚧 Under active development.
 
+## Campaign modes
+
+The CLI defaults to `--mode core`. The repaired original pipeline remains available as
+`--mode baseline`. Legacy Python calls that omit `mode` retain Baseline behavior;
+select `RunConfig(..., mode="core")` or pass `mode="core"` to `run_nightshift` for Core.
+
+```bash
+uv run nightshift run https://github.com/ORG/REPO --package PACKAGE --mode core --airgapped --budget 1
+uv run nightshift run https://github.com/ORG/REPO --package PACKAGE --mode baseline --airgapped --budget 1
+```
+
+Core derives frozen `roundtrip`/`equivalent` contracts from pinned README text, public
+signatures and docstrings. Function bodies, decorators and executable default expressions
+are excluded from that context. `--doc-path docs/versioned-guide.md` selects
+approved text paths. A separate Lightning context receives the frozen contract and source
+to generate adapters and constructive strategies; Super approves the mapping without the
+target bodies. Controller-owned `run_contract` checks execution fidelity and allows one
+bounded harness repair without changing the claim.
+
+Core uses fixed model roles: Lightning for contracts/strategies, Super for adapter review
+and active refutation. Each candidate receives three fresh-process replays. The investigator
+has six total tool calls, three runtime experiments and two known-issue searches. It can
+inspect allowlisted source, run literal-safe controls, test a bounded neighborhood and
+request known-issue research. Acceptance requires matching replays, a passing control and
+documentation inspection. Rejected and unresolved candidates remain visible.
+
+External retrieval is opt-in with `--online-lookup` and `TAVILY_API_KEY`. Tavily Search and
+Extract use explicit depths, `include_usage=True`, content hashes, request IDs and live/cache
+receipts. Documentation extraction accepts commit-pinned GitHub URLs with matching local
+evidence; unversioned search snippets cannot become contract evidence. Known-issue leads
+remain uncertain until their applicability is checked. `--tavily-credits` sets a separate
+ledger cap up to 1,000 credits. Reuse an injected Tavily client/ledger to share a cap across
+multiple campaigns. Unknown charges remain estimated/pending.
+
+`--airgapped` overrides online lookup and blocks retrieval caches too. Use it with frozen,
+agent-approved documentation for controlled benchmark discovery. Mode selection alone
+does not freeze the matched task, prompt, model, budget and cache configuration required
+for the Research Section 16.2 comparison; Baseline preserves its existing routing policy.
+
+Ultra is off by default. `--ultra-review --ultra-budget 0.02` enables a separately capped
+survivor review. Unavailability or failed patch validation cannot erase a valid finding.
+It does not grant human/maintainer validation or claim complete patch correctness.
+
+Both modes emit shared schema v1. Core also writes contracts, adapter approvals, full
+wrapper hashes, actual body/assertion counts (including shrink/replay), an execution
+manifest, investigation/replay receipts, rejected/unresolved logs, model accounting and
+Tavily ledgers under `runs/<run_id>/`. Each Core run receives a distinct response-cache
+namespace unless an explicit `RunConfig.cache_namespace` is supplied.
+
 `nightshift run` writes schema v1 reports. Findings remain AI-reviewed candidates until a
 human validates them; the legacy `bugs`/`verified` fields are compatibility views of repro
 checks. Patches are optional candidates checked against the unchanged discovery test and

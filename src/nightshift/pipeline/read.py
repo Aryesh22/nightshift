@@ -100,7 +100,7 @@ async def clone(repo_url: str, ref: str, dest: Path) -> Path:
 
 def _package_root(repo: Path, package: str) -> Path:
     for candidate in (repo / "src" / package, repo / package):
-        if candidate.is_dir():
+        if candidate.is_dir() and candidate.resolve().is_relative_to(repo.resolve()):
             return candidate
     raise FileNotFoundError(f"package {package!r} not found under {repo} or {repo / 'src'}")
 
@@ -109,6 +109,8 @@ def index_functions(repo: Path, package: str) -> SourceIndex:
     root = _package_root(repo, package)
     functions: dict[str, tuple[str, str]] = {}
     for path in sorted(root.rglob("*.py")):
+        if not path.resolve().is_relative_to(repo.resolve()):
+            continue
         if SKIP_DIRS & set(path.relative_to(root).parts):
             continue
         text = path.read_text(errors="replace")

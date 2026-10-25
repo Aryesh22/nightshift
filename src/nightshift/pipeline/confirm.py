@@ -191,3 +191,91 @@ async def confirm(
         route_trace=verdict.trace + trace,
         verification=evidence,
     )
+
+
+async def review_core_survivor(client, sandbox, base_env, finding, contract, approved, index,
+                               config, *, namespace: str, allowance_usd: float | None = None):
+    """One optional Ultra request; separately capped and never a finding-state gate."""
+    import json
+    import shlex
+    from nightshift.config import MODELS
+    from nightshift.llm.client import estimate_tokens
+    from nightshift.llm.budget import cost_usd
+    from nightshift.contracts.render import render_test
+    from nightshift.contracts.runner import run_contract, TEST_PATH
+    from nightshift.pipeline.verification import sha256
+    from nightshift.report import Check, RouteStep
+
+    cap = config.ultra_budget_usd if allowance_usd is None else allowance_usd
+    messages = [{"role": "system", "content":
+        "Review a surviving AI-reviewed candidate. Do not change its contract, input or review status. "
+        "Return JSON with root_cause and optional patch_diff (empty string when uncertain). "
+        "Library changes only; never edit tests, repros or controller artifacts."},
+        {"role": "user", "content": json.dumps({"contract": contract.to_dict(), "candidate": finding.actual,
+            "source": {api: index.lookup(api)[1][:8000] for api in contract.apis},
+            "checks": [{"question": c.question, "tool": c.tool, "effect": c.effect} for c in finding.checks]})}]
+    spec = getattr(client, "models", MODELS).get("ultra")
+    if spec is None:
+        finding.checks.append(Check("Is optional Ultra available?", "ultra_review",
+                                    "skipped: no Ultra model configured", "neutral"))
+        return 0.0
+    bound = cost_usd(spec, estimate_tokens(messages), 1536)
+    if cap <= 0 or bound > cap:
+        finding.checks.append(Check("Can optional Ultra review fit its separate cap?", "ultra_review",
+                                    "skipped: conservative reservation exceeds remaining Ultra allowance", "neutral"))
+        return 0.0
+    before = client.budget.spent_usd + client.budget.reserved_usd
+    patched = None
+    try:
+        result = await client.chat("ultra", messages, stage="review", max_tokens=1024, thinking=512,
+                                   json_mode=True, namespace=namespace, retry_limit=0)
+        finding.route_trace.append(RouteStep("review", "ultra", 512, result.cost_usd, cached=result.cached))
+        payload = result.json()
+        root = payload.get("root_cause")
+        if isinstance(root, str) and root.strip():
+            finding.root_cause = root
+        diff = payload.get("patch_diff") or ""
+        if not isinstance(diff, str):
+            raise ValueError("invalid optional patch")
+        if diff:
+            finding.patch_diff = diff
+            source_path = index.lookup(contract.apis[0])[0]
+            paths = patch_paths(diff, source_path)
+            patched = await sandbox.fork(base_env)
+            discovery = render_test(contract, approved.harness, max_examples=config.max_examples)
+            await sandbox.put_file(patched, TEST_PATH, discovery)
+            await sandbox.put_file(patched, REPRO_PATH, finding.repro)
+            await sandbox.put_file(patched, PATCH_PATH, diff.rstrip("\n") + "\n")
+            inspection = await sandbox.run(patched, f"git apply --numstat {PATCH_PATH}", 30)
+            actual_paths = {line.split("\t", 2)[-1] for line in inspection.stdout.splitlines() if "\t" in line}
+            if inspection.exit_code != 0 or actual_paths != paths:
+                raise ValueError("patch paths failed controller/Git agreement")
+            dry = await sandbox.run(patched, f"git apply --check {PATCH_PATH}", 30)
+            if dry.exit_code != 0:
+                raise ValueError("patch failed git apply --check")
+            applied = await sandbox.run(patched, f"git apply {PATCH_PATH}", 30)
+            hashes = {TEST_PATH: sha256(discovery), REPRO_PATH: sha256(finding.repro)}
+            script = ("import hashlib; from pathlib import Path; " + f"expected={hashes!r}; " +
+                      "assert all(hashlib.sha256(Path(p).read_bytes()).hexdigest()==h for p,h in expected.items())")
+            guard = await sandbox.run(patched, shlex.quote(config.python) + " -c " + shlex.quote(script), 30)
+            changed = await sandbox.run(patched, "git diff --name-only --no-renames HEAD", 30)
+            if applied.exit_code != 0 or guard.exit_code != 0 or changed.exit_code != 0 or set(changed.stdout.splitlines()) != paths:
+                raise ValueError("patch application/protected hashes/resulting diff failed policy")
+            checked = await run_contract(sandbox, patched, contract, approved.harness, python=config.python,
+                                           max_examples=config.max_examples, timeout_s=config.campaign_timeout_s)
+            finding.patch_validation = (
+                "Candidate passed the unchanged frozen property with fresh examples and protected hash/diff checks. "
+                "No independent hidden or complete project-suite validation."
+                if checked.kind == "passed" else f"Candidate failed unchanged property: {checked.kind}: {checked.reason}")
+        finding.checks.append(Check("What did the optional survivor review establish?", "ultra_review",
+                                    finding.patch_validation or "Root-cause suggestion only; no patch validated.", "neutral"))
+    except Exception as exc:
+        finding.patch_validation = f"Optional review/patch unavailable or unvalidated: {type(exc).__name__}: {exc}"
+        finding.checks.append(Check("Was optional survivor review available?", "ultra_review", finding.patch_validation, "neutral"))
+    finally:
+        if patched is not None:
+            try:
+                await sandbox.close(patched)
+            except SandboxError as exc:
+                finding.patch_validation = f"Optional patch cleanup failed: {exc}"
+    return max(0.0, client.budget.spent_usd + client.budget.reserved_usd - before)

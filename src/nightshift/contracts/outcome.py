@@ -23,6 +23,7 @@ class CampaignOutcome:
     stats: dict | None
     reach_rate: float | None = None
     low_reach: bool = False
+    execution: RunResult | None = None
 
     @property
     def is_candidate(self) -> bool:

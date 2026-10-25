@@ -8,6 +8,8 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
+from typing import Literal
+import math
 
 from nightshift.llm import BudgetExceeded, NemotronClient
 from nightshift.pipeline.confirm import confirm
@@ -32,6 +34,34 @@ class RunConfig:
     variants_per_target: int = 2
     runs_dir: Path = Path("runs")
     setup_cmds: tuple[str, ...] = tuple(SETUP_CMDS)
+    # Compatibility for callers predating dual-mode campaigns. The CLI explicitly
+    # selects Core by default; new API callers select mode="core" here or below.
+    mode: Literal["core", "baseline"] = "baseline"
+    airgapped: bool = False
+    online_lookup: bool = False
+    tavily_credits: float = 1000
+    doc_paths: tuple[str, ...] = ("README.md",)
+    max_examples: int = 200
+    campaign_timeout_s: float = 120
+    python: str = "python"
+    cache_namespace: str = ""
+    ultra_review: bool = False
+    ultra_budget_usd: float = 0.02
+    ultra_max_survivors: int = 2
+
+    def __post_init__(self):
+        if self.mode not in {"core", "baseline"}:
+            raise ValueError("mode must be core or baseline")
+        if not math.isfinite(self.tavily_credits) or not 0 <= self.tavily_credits <= 1000:
+            raise ValueError("Tavily credit allowance must be between 0 and 1000")
+        if not math.isfinite(self.ultra_budget_usd) or self.ultra_budget_usd < 0:
+            raise ValueError("Ultra allowance must be finite and nonnegative")
+        if not 1 <= self.max_examples <= 10_000 or not 1 <= self.variants_per_target <= 10:
+            raise ValueError("invalid bounded campaign profile")
+        if not 0 <= self.ultra_max_survivors <= 10 or not 1 <= self.max_targets <= 128:
+            raise ValueError("invalid survivor/contract limit")
+        if not 0 < self.campaign_timeout_s <= 600:
+            raise ValueError("campaign timeout must be between 0 and 600 seconds")
 
 
 def _jsonl(path: Path, rows: list) -> None:
@@ -40,7 +70,15 @@ def _jsonl(path: Path, rows: list) -> None:
     temporary.replace(path)
 
 
-async def run_nightshift(config: RunConfig, client: NemotronClient, sandbox: SandboxExecutor, router: Router | None = None) -> dict:
+async def run_nightshift(config: RunConfig, client: NemotronClient, sandbox: SandboxExecutor,
+                         router: Router | None = None, *, mode: Literal["core", "baseline"] | None = None,
+                         tavily=None) -> dict:
+    selected = config.mode if mode is None else mode
+    if selected not in {"core", "baseline"}:
+        raise ValueError("mode must be core or baseline")
+    if selected == "core":
+        from nightshift.pipeline.core import run_core
+        return await run_core(config, client, sandbox, tavily=tavily)
     router = router or Router()
     library = config.library or config.package
     run_id = f"{datetime.now(timezone.utc):%Y-%m-%d-%H%M%S}-{uuid4().hex[:8]}-{library}"
@@ -147,6 +185,7 @@ async def run_nightshift(config: RunConfig, client: NemotronClient, sandbox: San
 
     report = build_campaign_report(run_id, lib_info, stats, client.budget.summary(), bugs, router.summary(), stopped,
                                    targets=targets, verdicts=completed_verdicts, failures=failing)
+    report["mode"] = "baseline"
     write_campaign_report(run_dir, report)
     return report
 

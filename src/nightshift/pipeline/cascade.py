@@ -65,3 +65,31 @@ async def call_with_cascade(
             return parsed, trace
         rung = router.next_rung(stage, rung)
     return None, trace
+
+
+async def call_fixed_role(client, tier: str, stage: str, messages: list[dict], parse,
+                          *, verify=None, attempts: int = 1, max_tokens: int = 2048,
+                          thinking: int = 0, variant: int = 0, namespace: str = ""):
+    """Bounded repair on one fixed model. Core never consults or trains the router."""
+    from nightshift.report import RouteStep as CoreRouteStep
+
+    if attempts not in {1, 2}:
+        raise ValueError("a fixed-role stage allows at most one repair")
+    trace, feedback = [], ""
+    for attempt in range(attempts):
+        context = [*messages]
+        if feedback:
+            context.append({"role": "user", "content": "Repair the harness/output only; preserve the frozen claim.\n" + feedback})
+        result = await client.chat(tier, context, stage=stage, thinking=thinking, max_tokens=max_tokens,
+                                   temperature=0.2, json_mode=True, variant=variant + attempt,
+                                   namespace=namespace)
+        try:
+            parsed = parse(result.json())
+            ok, feedback = await verify(parsed) if verify else (True, "")
+        except (ValueError, TypeError, KeyError, SyntaxError) as exc:
+            parsed, ok, feedback = None, False, str(exc)
+        trace.append(CoreRouteStep(stage, tier, thinking, result.cost_usd, cached=result.cached,
+                                   escalation_reason=feedback if not ok else ("bounded repair" if attempt else None)))
+        if ok:
+            return parsed, trace
+    return None, trace

@@ -118,9 +118,14 @@ class NemotronClient:
         temperature: float = 0.2,
         json_mode: bool = False,
         variant: int = 0,
+        namespace: str = "",
+        retry_limit: int | None = None,
     ) -> LLMResult:
         """`variant` lets callers draw distinct samples that are still cached on re-runs."""
         spec = self.models[tier]
+        retries = self.max_retries if retry_limit is None else retry_limit
+        if type(retries) is not int or not 0 <= retries <= self.max_retries:
+            raise ValueError("retry_limit may only reduce the client's retry ceiling")
         body: dict = {
             "model": spec.model_id,
             "messages": messages,
@@ -131,7 +136,7 @@ class NemotronClient:
         if json_mode:
             body["response_format"] = {"type": "json_object"}
 
-        key = cache_key({"base_url": spec.base_url, "body": body, "variant": variant})
+        key = cache_key({"base_url": spec.base_url, "body": body, "variant": variant, "namespace": namespace})
         if (hit := self.cache.get(key)) is not None:
             return self._result(spec, thinking, hit, cached=True)
 
@@ -141,7 +146,7 @@ class NemotronClient:
         if input_bound + body["max_tokens"] > spec.context_tokens:
             raise ValueError("request's conservative token bound exceeds the model context")
         worst_case = cost_usd(spec, input_bound, body["max_tokens"])
-        for retry in range(self.max_retries + 1):
+        for retry in range(retries + 1):
             async with self._limits[tier]:
                 reservation = self.budget.reserve(worst_case)
                 attempt = self.budget.submitted(reservation, tier, stage)
@@ -169,7 +174,7 @@ class NemotronClient:
                 except (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout):
                     self.budget.release(reservation)
                     attempt["status"] = "not_submitted"
-                    if retry == self.max_retries:
+                    if retry == retries:
                         raise
                 except httpx.HTTPStatusError as exc:
                     status = exc.response.status_code
@@ -178,11 +183,11 @@ class NemotronClient:
                     else:
                         self.budget.release(reservation)
                         attempt["status"] = "rejected"
-                    if status not in RETRYABLE_STATUS or retry == self.max_retries:
+                    if status not in RETRYABLE_STATUS or retry == retries:
                         raise
                 except httpx.TransportError as exc:
                     self.budget.mark_pending(attempt, f"ambiguous transport: {type(exc).__name__}")
-                    if retry == self.max_retries:
+                    if retry == retries:
                         raise
                 except BaseException as exc:
                     if attempt["status"] == "submitted":

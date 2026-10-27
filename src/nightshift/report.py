@@ -35,6 +35,7 @@ class EvidenceRef:
     source: str  # URL or path
     excerpt: str
     retrieved: str = ""  # "live <time>" | "cache <time>" | "manual"
+    content_hash: str = ""
 
 
 @dataclass
@@ -112,6 +113,12 @@ class Report:
     stats: Stats = field(default_factory=Stats)
     cost_by_model: dict[str, float] = field(default_factory=dict)
     findings: list[Finding] = field(default_factory=list)
+    mode: str | None = None
+    retrieval_receipts: list[dict] = field(default_factory=list)
+    retrieval_failures: list[dict] = field(default_factory=list)
+    contracts: list[dict] = field(default_factory=list)
+    _extra: dict = field(default_factory=dict)
+    _include_fields: set[str] = field(default_factory=set)
 
     def status_counts(self) -> dict[str, int]:
         counts: dict[str, int] = {}
@@ -127,9 +134,22 @@ class Report:
 
     def to_dict(self) -> dict:
         d = asdict(self)
+        d.pop("_extra", None)
+        d.pop("_include_fields", None)
         d["schema_version"] = SCHEMA_VERSION
         d["status_counts"] = self.status_counts()
         d["cost_per_validated_finding"] = self.cost_per_validated_finding
+        if self.mode is not None and ("mode" in self._include_fields or self.mode != "core"):
+            d["mode"] = self.mode
+        elif "mode" not in self._include_fields:
+            d.pop("mode", None)
+        if not self.retrieval_receipts and "retrieval_receipts" not in self._include_fields:
+            d.pop("retrieval_receipts", None)
+        if not self.retrieval_failures and "retrieval_failures" not in self._include_fields:
+            d.pop("retrieval_failures", None)
+        if not self.contracts and "contracts" not in self._include_fields:
+            d.pop("contracts", None)
+        d.update(self._extra)
         return d
 
     def write(self, runs_dir: Path | str = "runs") -> Path:
@@ -142,6 +162,13 @@ class Report:
     def from_dict(cls, d: dict) -> Report:
         if d.get("schema_version") != SCHEMA_VERSION:
             raise ValueError("report must use schema v1")
+        known = {
+            "run_id", "library", "stats", "cost_by_model", "findings",
+            "mode", "retrieval_receipts", "retrieval_failures", "contracts",
+            "schema_version", "status_counts", "cost_per_validated_finding",
+        }
+        extra = {k: v for k, v in d.items() if k not in known}
+        include = {k for k in ("mode", "retrieval_receipts", "retrieval_failures", "contracts") if k in d}
         return cls(
             run_id=d["run_id"],
             library=Library(**d["library"]),
@@ -149,6 +176,12 @@ class Report:
                            if k in {f.name for f in fields(Stats)}}),
             cost_by_model=d.get("cost_by_model", {}),
             findings=[_finding(f) for f in d.get("findings", [])],
+            mode=d.get("mode"),
+            retrieval_receipts=d.get("retrieval_receipts", []),
+            retrieval_failures=d.get("retrieval_failures", []),
+            contracts=d.get("contracts", []),
+            _extra=extra,
+            _include_fields=include,
         )
 
     @classmethod
@@ -175,7 +208,7 @@ def build_campaign_report(run_id, library, stats, budget_summary, bugs, router_s
         contract = ContractRef(
             contract_id=f"legacy.{target.id if target else bug.target}", version=1,
             hash=sha256_text(claim), family=bug.property, claim=claim, status="inferred",
-            evidence=[EvidenceRef("repository documentation/source", target.evidence, "manual")]
+            evidence=[EvidenceRef("repository documentation/source", target.evidence, "manual", sha256_text(target.evidence))]
                      if target and target.evidence else [],
         )
         validation = getattr(bug, "verification", {})

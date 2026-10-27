@@ -1,68 +1,89 @@
-# 👥 Nightshift Team Plan (v2, Oct 20)
+# 👥 Nightshift Team Plan (v3, Oct 27)
 
-**Deadline:** Oct 30, 2026 @ 10:00am PDT (10:30pm IST). **Our target: submit Oct 29.**
-**Budget:** $0 out of pocket (free credits only). **Rule:** if a task stalls for more than 1 day, say so in the group chat and Aryesh takes it over.
+**Deadline:** Oct 30, 2026 @ 10:00am PDT (10:30pm IST). **Our target: submit Oct 29 evening IST.**
+**Budget:** $0 out of pocket (free credits only). **Rule:** if a task stalls for more than half a day now, say so in the group chat and Aryesh takes it over.
 
-## What changed in v2 (read this first)
-We changed the plan after the research review in `NIGHTSHIFT_RESEARCH.md`. In one line:
-**Find bugs that break what the docs promise, try hard to prove each bug is fake, and show the evidence.**
+## What changed in v3 (read this first)
+- **PR #1 (Jatin) is merged.** `main` now has the Core contract-first pipeline, `DockerSandbox`, the Nebius-VM variant, the Tavily client with credit ledger, the Super investigator and 3-replay runner. Aryesh's review fixes are on `aryesh/core-from-pr1` (budget overrun handling, Tavily edge cases, Docker timeout, defaults, README) and go in next.
+- **PR #2 (Jatin, paired evaluation harness) is under review, not merged.** The metric code is reusable, but the "self-test" produces a Core-vs-Baseline table from hand-written numbers. Nothing from it may appear in the write-up, video or README until it has run on real PBT-Bench tasks with PBT-Bench's own evaluator. See "Claims we must NOT make".
+- **Nothing has talked to a real model or a real Docker engine yet.** Every passing test uses a scripted model and the unsafe local runner. That is the single biggest risk with 3 days left, so the first two tasks below are about that.
+- **Only tick a box for your own task, after you ran it.** v2's board had boxes ticked for work the ticker could not have seen. A ❓ below means "owner, confirm in today's sync".
 
-1. **Contract first.** Before testing, write down what the *docs* promise (a "contract"), without looking at the code. Then test the code against it, so the AI can't copy a bug into its own test.
-2. **Few smart generators, not hundreds of tests.** The model writes a Hypothesis strategy, and Hypothesis runs thousands of inputs.
-3. **Test pairs of APIs.** Examples: `encode`/`decode`, a convenience call vs. the general call, chunked vs. whole.
-4. **Triage is a detective.** Super tries to *disprove* each bug (bad input? version? flaky? broken test?) and may answer **unresolved**.
-5. **Evidence bundle per bug:** a reduced repro, a passing control, 3 fresh-process replays, the doc source, and the detective's checks.
-6. **Ultra only on the best survivors.** Patches are optional and come last.
-7. **One honest benchmark:** 10 PBT-Bench tasks × (simple baseline vs. Nightshift) = 20 runs, under $10.
-8. **No learned router before the deadline.** Use simple escalation rules and log why each step escalated.
+The plan itself is unchanged: **find bugs that break what the docs promise, try hard to prove each bug is fake, and show the evidence.** Contract first, few smart generators, API pairs, detective triage that may say `unresolved`, an evidence bundle per bug, Ultra only on survivors, one honest benchmark, no learned router.
 
 ## Roles
 
 | Person | Role | Owns |
 |---|---|---|
-| **Aryesh** ([@Aryesh22](https://github.com/Aryesh22)) | 🧠 Contracts & AI pipeline | Contract format, adapters, test wrapper, prompts, Lightning generation, Super investigator, Ultra review, escalation rules |
-| **Jatin** ([@jatin-encrypted](https://github.com/jatin-encrypted)) | ⚙️ Runtime & evidence | Sandbox (Docker → Nebius), fresh-process replay, shrinking, investigator tools, Tavily docs + known-issue search with receipts, real-package campaigns |
-| **Ruchir** ([@Ruchir038](https://github.com/Ruchir038)) | 🎨 Product & evaluation | Next.js dashboard, evidence views, PBT-Bench evaluation (Aryesh helps set it up), deploy, video, Devpost write-up |
+| **Aryesh** ([@Aryesh22](https://github.com/Aryesh22)) | 🧠 Contracts & AI pipeline | Contract format, adapters, test wrapper, prompts, Lightning generation, Super investigator, Ultra review, escalation rules, `main` and reviews |
+| **Jatin** ([@jatin-encrypted](https://github.com/jatin-encrypted)) | ⚙️ Runtime & evidence | Sandbox (Docker → Nebius VM), fresh-process replay, investigator tools, Tavily docs + known-issue search with receipts, real-package campaigns, product feedback write-up |
+| **Ruchir** ([@Ruchir038](https://github.com/Ruchir038)) | 🎨 Product & evaluation | Next.js dashboard, evidence views, PBT-Bench task selection and manifest, deploy, video, Devpost write-up |
 
-## Contracts between us
-- **Aryesh ↔ Jatin:** `src/nightshift/sandbox/base.py` (`prepare(repo_url, ref, setup_cmds)`, `fork`, `put_file`, `run(cmd)` → `RunResult`, `close`).
-  `src/nightshift/sandbox/local.py` is a working (un-isolated) reference implementation; `DockerSandbox` should pass the same tests.
-  Contract campaigns run `python -m pytest -q -s ...`, whose stdout carries a `NIGHTSHIFT_STATS {...}` line.
-- **Aryesh/Jatin → Ruchir:** `runs/<run_id>/report.json`, defined in `src/nightshift/report.py`.
-  Build the dashboard against **`samples/report.json`** (fake data, schema v1). Regenerate it with `uv run python samples/make_sample_report.py`.
-- **Finding statuses**, used everywhere: `raw_anomaly` → `reproducible` → `ai_reviewed` → `human_validated` → `maintainer_confirmed`, plus `unresolved` and `rejected` (with a reason). The dashboard shows rejected findings too.
+## Contracts between us (unchanged, two additions)
+- **Aryesh ↔ Jatin:** `src/nightshift/sandbox/base.py` (`prepare`, `fork`, `put_file`, `run` → `RunResult`, `close`). `DockerSandbox` must pass the same behaviour as `UnsafeLocalSandbox` does in the tests.
+- **Aryesh/Jatin → Ruchir:** `runs/<run_id>/report.json`, schema v1 in `src/nightshift/report.py`. Build the dashboard against **`samples/report.json`**; regenerate it with `uv run python samples/make_sample_report.py`. **Schema changes go in their own PR, with Ruchir tagged, and the sample regenerated in the same PR.** Core reports also carry `contracts`, `campaigns`, `accounting`, `tavily_ledger`, `retrieval_receipts`, `rejected.json`, `unresolved.json` next to the report.
+- **Ruchir → Aryesh/Jatin (new):** `benchmark/tasks.json`, a task manifest in the format `src/nightshift/eval.py` reads on PR #2: `task_id, repo_url, ref, package, doc_paths, setup_cmds, known_defects, hard_negatives, budget_usd`.
+- **Finding statuses:** `raw_anomaly` → `reproducible` → `ai_reviewed` → `human_validated` → `maintainer_confirmed`, plus `unresolved` and `rejected` (with a reason). Only a human sets `human_validated`; the code never does.
 
-## Timeline and tasks
-Tick the boxes as you go.
+## Status board (honest, as of Oct 27 morning)
 
-### Phase 1: Foundations (Oct 19–21) [COMPLETE]
+### Done and on `main`
 - [x] **Aryesh:** repo, `uv`, Nemotron client (cache, cost meter, hard $ cap), sandbox + report contracts
 - [x] **Aryesh:** contract format, controller-owned test wrapper, adapter audit, first contract/adapter pair (`base64` round trip)
-- [x] **Aryesh:** move `pipeline/` onto contracts + `report.json` v1 (it still writes v0 and uses the old learned router)
-- [x] **Aryesh:** get the Nebius API key, then run `scripts/check_models.py --ping`. Confirm model IDs and which reasoning controls actually work.
-- [x] **Jatin:** request Sandbox beta access **today**. Build `DockerSandbox` (no secrets inside, CPU/memory/time limits). Get a Tavily key.
-- [x] **Ruchir:** Next.js skeleton using `samples/report.json`, plus the finding card layout (the 5 questions below)
-- [x] **Ruchir + Aryesh:** preflight **2 PBT-Bench tasks** through its evaluator, then write down the rules for choosing the 10 tasks *before* running Nightshift
+- [x] **Aryesh:** `pipeline/` on contracts + `report.json` v1 (landed via PR #1, reviewed by Aryesh)
+- [x] **Jatin:** `DockerSandbox` (no secrets inside, CPU/memory/pids/time/output limits, offline forks) and the Nebius-VM variant, **written and unit-tested only**
+- [x] **Jatin:** Tavily Search + Extract with URL, excerpt, hash, request id, credits, live/cache receipts; per-run credit ledger; air gap
+- [x] **Jatin:** 3-replay fresh-process runner and the four investigator tools (`run_control_input`, `inspect_doc_and_source`, `check_boundary_neighborhood`, `search_known_issues_tavily`)
+- [x] **Jatin + Aryesh:** Lightning writes contracts from docs only and harnesses from contract + source; Super approves adapters without bodies and investigates with a refutation loop that may answer `unresolved`; baseline arm kept for the comparison
 
-### Phase 2: Working slice (Oct 22–23) [COMPLETE]
-- [x] **Aryesh:** Lightning writes contracts from docs only and strategies from the contract + source. Add API-pair hints (names, signatures, existing tests). Build the Super investigator with a refutation checklist that may answer `unresolved`.
-- [x] **Jatin:** Tavily Search + Extract for versioned docs (store URL, excerpt, hash, credits). Add the 3-replay fresh-process runner, the shrinking pass, and the investigator tools (`run_control_input`, `inspect_doc_and_source`, `check_boundary_neighborhood`, `search_known_issues_tavily`).
-- [x] **Ruchir:** finding cards, a "Documentation evidence" view, a "Checks we ran" view, a rejected-findings view, and a cost view
-- [x] **Ruchir:** pick the 10 PBT-Bench tasks (4 L1, 4 L2, 2 L3). Hide answers, fixes and defect notes from the agent.
+### Not done, or unverified
+- [ ] ❓ **Aryesh:** Nebius API key, then `uv run python scripts/check_models.py --ping`. Confirm the three model IDs and which reasoning controls work. **Nothing else matters until this works.**
+- [ ] ❓ **Jatin:** Sandbox beta access requested? Tavily key obtained?
+- [ ] **Jatin:** run `DockerSandbox` for real once (`base64` contract: prepare → fork → put_file → run → close) and paste the output in the PR thread
+- [ ] ❓ **Ruchir:** Next.js skeleton against `samples/report.json`? Finding card with the 5 questions?
+- [ ] ❓ **Ruchir + Aryesh:** 2 PBT-Bench tasks preflighted through PBT-Bench's own evaluator; selection rules for the 10 tasks written down
+- [ ] **Ruchir:** the 10 tasks picked (4 L1, 4 L2, 2 L3), answers hidden from the agent, `benchmark/tasks.json` committed
 
-### Phase 3: Real hunting + benchmark (Oct 24–25)
-- [x] **Aryesh:** fix the generation/triage failures we observe. Build the **baseline** variant (one prompt + passive judge) for the comparison.
-- [x] **Jatin:** Paired evaluation harness (`eval.py`, `run_evaluation.py`) with exact v1.1 metrics, `--self-test` mode, and sample report v1.1 upgrades.
-- [ ] **Jatin:** campaigns on **1–3 prepared real packages**. Known-issue search on survivors.
-- [ ] **Ruchir + Aryesh:** run the **20-campaign comparison** (cap $10). Record every cost, failure and denominator.
-- [ ] **ALL:** a human reproduces every survivor. File genuine ones **by Oct 25–26** (be polite, mention AI assistance).
-- [ ] **Ruchir:** deploy the dashboard (Vercel/Render free) with replay mode and a capped "try live" button
+## The last three days
 
-### Phase 4: Proof + submission (Oct 26–29)
-- [ ] **Aryesh:** capped Ultra root-cause review on 1–2 validated survivors (skip it if there are none). Optional patch, only with hidden-test validation.
-- [ ] **Jatin:** product feedback write-up (Token Factory, Sandboxes, Nemotron, Tavily). Setup instructions in the README.
-- [ ] **Ruchir:** 3-min video, Devpost write-up, architecture diagram
-- [ ] **ALL (Oct 29):** final checklist: repo **public**, license visible, demo live until Dec 15, video public, submit
+### Oct 27 (today): make it real
+- [ ] **Aryesh:** merge `aryesh/core-from-pr1`. Review PR #2 (see above). Get the Nebius key working and ping the models.
+- [ ] **Aryesh:** first **real** Core campaign on one small, pure-Python package (candidates: `python-slugify`, `toml`, `tabulate`) with `--budget 0.50 --airgapped --sandbox docker` as soon as Jatin's Docker run is confirmed. Fix whatever breaks in contract extraction, harness generation and the investigator loop. This is where the prompts meet reality for the first time.
+- [ ] **Jatin:** real Docker run (above). Then prepare 2 real packages (clone + install inside the sandbox works, `setup_cmds` recorded) and run one Core campaign on each with `--online-lookup` so we get real Tavily receipts.
+- [ ] **Jatin:** on PR #2, split the reusable part (`EvalTask`, `load_manifest`, `compute_metrics`, the Markdown table) from the hand-written self-test, give each arm its own `Budget(task.budget_usd)`, and drop `--sandbox local` for real packages.
+- [ ] **Ruchir:** everything under "Ruchir's work" below, in that order.
+
+### Oct 28: evidence
+- [ ] **Ruchir + Aryesh:** run the **paired comparison** on the 10 tasks (20 campaigns, cap $10). Record every cost, failure and denominator. If credits are short, run 5 tasks and say so.
+- [ ] **ALL:** a human reproduces every `ai_reviewed` survivor from the real campaigns. Set `human_validated` by hand in the run's `report.json` only after you ran the repro yourself. File genuine ones upstream (polite, mention AI assistance, link the evidence bundle).
+- [ ] **Jatin:** known-issue search on every survivor; product feedback write-up (Token Factory, Sandboxes, Nemotron, Tavily) as `docs/product-feedback.md`.
+- [ ] **Aryesh:** capped Ultra review on 1–2 validated survivors (skip if none). Optional patch only with validation.
+- [ ] **Ruchir:** deploy the dashboard with replay mode loading our real runs; demo button capped at $0.25.
+
+### Oct 29: ship
+- [ ] **Ruchir:** 3-min video, Devpost write-up, architecture diagram (uses only numbers from the real runs and the benchmark table)
+- [ ] **Jatin:** README setup instructions verified on a clean machine (Docker path end to end)
+- [ ] **Aryesh:** final pass on `main`, tag `v0.1`
+- [ ] **ALL:** final checklist: repo **public**, license visible, demo live until Dec 15, video public, submit
+
+## Ruchir's work (Oct 27–29, in priority order)
+Everything you need is on `main` plus `samples/report.json`. Ask Aryesh if a field is unclear; do not guess.
+
+1. **Dashboard against the current `samples/report.json`** (Next.js, Vercel free tier). Pages:
+   - **Run overview:** library name + version/commit, `status_counts`, total cost, `cost_per_validated_finding` (show "n/a" when null; never divide by zero in the UI), Tavily credits used.
+   - **Finding card** answering the 5 questions below, using these fields: `contract.claim` + `contract.evidence[]` (source link, excerpt, retrieved live/cache/manual) → Q1; `repro`, `actual`, `expected` → Q2; `checks[]` (`question`, `tool`, `result`, `effect`) + `control` + `replays_passed/attempted` → Q3; `status`, `uncertainty`, `rejection_reason`, `known_behaviour` → Q4; `cost_usd`, `route_trace[]` → Q5.
+   - **Rejected and unresolved view:** same cards, filtered. The judges must see what we threw away.
+   - **Cost view:** `cost_by_model` and per-finding cost; a small table, no fancy chart needed.
+   - **Replay mode:** load any `report.json` by file upload or `?report=<url>`; this is how the demo stays live after credits run out.
+2. **PBT-Bench task selection, before any campaign runs** (half a day, with Aryesh for the first two):
+   - Write `benchmark/SELECTION.md`: the rules (4 L1, 4 L2, 2 L3; pure Python; installs offline inside Docker; docs in the repo) and why.
+   - Preflight 2 tasks through PBT-Bench's **own** evaluator so we know its output format.
+   - Commit `benchmark/tasks.json` in the manifest format above. `known_defects` and `hard_negatives` stay out of anything the agent reads.
+3. **Deploy** (Oct 28): Vercel, replay mode on by default, "try live" button capped at $0.25 and off when credits are gone.
+4. **Video + Devpost + diagram** (Oct 29): one real finding card walked end to end, the benchmark table as measured, the cost. Script it on Oct 28 evening so recording is quick.
+5. **Submission checklist owner:** you own the Oct 29 checklist and ping everyone until each box is ticked.
+
+What **not** to spend time on: a learned router view, patch diffs (optional and last), animations, a landing page.
 
 ## Key CLI Commands
 
@@ -111,15 +132,17 @@ Metrics computed and formatted in JSON & Markdown:
 | Final demo + Ultra review + optional patch | $5 |
 | Reserve for judges trying the demo | $10 |
 
-Tavily (1,000 free credits/month): 250 docs · 200 known-issue search · 200 dev/demo · 350 reserve. **Never enable paid overage.**
+Tavily (1,000 free credits/month): 250 docs · 200 known-issue search · 200 dev/demo · 350 reserve. The CLI caps each run at 100 by default. **Never enable paid overage.**
 
 ## Claims we must NOT make
 - "First system to…" or "proves the bug/patch is correct"
 - "New bug" just because a search found no matching issue
-- "Maintainer confirmed" when only we checked it
+- "Maintainer confirmed" or "human validated" when only the code checked it
 - Copying a paper's numbers as our results. We only claim what we measured, with the counts.
+- **Any number from a self-test, fixture or sample report.** If it did not come from `runs/<run_id>/` of a real campaign, it is not a result.
 
 ## Daily rhythm
-- **10-minute sync each day:** what I did, what I'm doing next, what's blocking me
-- Work on branches → PR → one teammate reviews → merge to `main`
+- **10-minute sync each day** (fixed time, pick one today): what I did, what I'm doing next, what's blocking me
+- Work on branches → PR **with a body** (what, why, how tested) → one teammate reviews → merge to `main`. One topic per PR; PRs from a branch, not from a fork's `main`.
+- Only the owner ticks their box, after running it.
 - Never commit API keys. Use `.env`, which is gitignored.

@@ -1,0 +1,234 @@
+{
+  "run_id": "2026-10-26-104000-core-packaging",
+  "library": {
+    "name": "packaging",
+    "version": "24.0",
+    "repo": "https://github.com/pypa/packaging"
+  },
+  "stats": {
+    "contracts": 3,
+    "campaigns": 6,
+    "infra_failures": 0,
+    "cost_usd": 0.36,
+    "tavily_credits": 3.0,
+    "human_review_minutes": 6.0
+  },
+  "cost_by_model": {
+    "lightning": 0.1,
+    "super": 0.16,
+    "ultra": 0.1
+  },
+  "findings": [
+    {
+      "id": "pkg_f1",
+      "title": "Local version segment with multiple hyphens normalizes inconsistently",
+      "status": "human_validated",
+      "contract": {
+        "contract_id": "packaging.version.roundtrip",
+        "version": 1,
+        "hash": "sha256:d514a3c51e2d9abddaf0d4ce5b1105be791bdb490537f55bd43923c3b2b9a295",
+        "family": "roundtrip",
+        "claim": "Version(str(v)) == v for any valid Version instance.",
+        "status": "explicit",
+        "evidence": [
+          {
+            "source": "https://packaging.pypa.io/en/stable/version/",
+            "excerpt": "PEP 440 version implementation.",
+            "retrieved": "live 2026-10-26T12:20:00Z",
+            "content_hash": "sha256:791feec225500b3b9a280a3d03c6e2706af50cd88d188999565d16181de97466"
+          }
+        ]
+      },
+      "repro": "from packaging.version import Version\nv = Version('1.0.0+local-build-1')\nassert Version(str(v)) == v",
+      "actual": "Version('1.0.0+local.build.1')",
+      "expected": "Version('1.0.0+local-build-1')",
+      "traceback": "",
+      "control": "Version('1.0.0') roundtrips cleanly",
+      "replays_passed": 3,
+      "replays_attempted": 3,
+      "checks": [
+        {
+          "question": "Does standard release roundtrip?",
+          "tool": "run_control_input",
+          "result": "{\"kind\": \"passed\"}",
+          "effect": "supports"
+        },
+        {
+          "question": "Does PEP 440 allow hyphens in local version?",
+          "tool": "inspect_doc_and_source",
+          "result": "{\"doc\": \"local versions permit alphanumeric and dots\"}",
+          "effect": "supports"
+        },
+        {
+          "question": "Check dot-separated neighborhood",
+          "tool": "check_boundary_neighborhood",
+          "result": "{\"inputs\": [\"'1.0.0+local.1'\"]}",
+          "effect": "supports"
+        },
+        {
+          "question": "Search known issues on local version hyphens",
+          "tool": "search_known_issues_tavily",
+          "result": "{\"outcome\": \"no_match_found\"}",
+          "effect": "neutral"
+        }
+      ],
+      "known_behaviour": {
+        "outcome": "no_match_found",
+        "links": [],
+        "note": "No matching open issues."
+      },
+      "uncertainty": "",
+      "rejection_reason": null,
+      "root_cause": "Local segment canonicalization replaces hyphen with period unconditionally.",
+      "patch_diff": null,
+      "patch_validation": null,
+      "cost_usd": 0.036,
+      "route_trace": [
+        {
+          "stage": "contract",
+          "model": "lightning",
+          "thinking": 0,
+          "cost_usd": 0.002,
+          "cached": false,
+          "escalation_reason": null
+        },
+        {
+          "stage": "investigate",
+          "model": "super",
+          "thinking": 512,
+          "cost_usd": 0.018,
+          "cached": false,
+          "escalation_reason": null
+        },
+        {
+          "stage": "review",
+          "model": "ultra",
+          "thinking": 1024,
+          "cost_usd": 0.016,
+          "cached": false,
+          "escalation_reason": null
+        }
+      ]
+    },
+    {
+      "id": "pkg_f2",
+      "title": "InvalidSpecifier raised for '~=1.0.*'",
+      "status": "rejected",
+      "contract": {
+        "contract_id": "packaging.specifiers.domain",
+        "version": 1,
+        "hash": "sha256:7c1e2195f5483b48061a9f62c420a84803f485be2911ae50f8c8e62b06f5ea73",
+        "family": "roundtrip",
+        "claim": "SpecifierSet('~=1.0.*') raises InvalidSpecifier",
+        "status": "explicit",
+        "evidence": [
+          {
+            "source": "docs",
+            "excerpt": "Wildcard with compatible release is invalid",
+            "retrieved": "manual",
+            "content_hash": "sha256:9f1ce32773d9767eba14d35afc7f10f0e8b0741bcfa0c4c5dde10b9f5c891b56"
+          }
+        ]
+      },
+      "repro": "from packaging.specifiers import SpecifierSet\nSpecifierSet('~=1.0.*')",
+      "actual": "InvalidSpecifier",
+      "expected": "SpecifierSet instance",
+      "traceback": "",
+      "control": "",
+      "replays_passed": 0,
+      "replays_attempted": 0,
+      "checks": [
+        {
+          "question": "Is ~= with wildcard valid in PEP 440?",
+          "tool": "inspect_doc_and_source",
+          "result": "{\"doc\": \"The prefix matching operator != does not allow wildcards\"}",
+          "effect": "refutes"
+        }
+      ],
+      "known_behaviour": null,
+      "uncertainty": "",
+      "rejection_reason": "PEP 440 explicitly prohibits wildcard with compatible release (~=) operator.",
+      "root_cause": null,
+      "patch_diff": null,
+      "patch_validation": null,
+      "cost_usd": 0.007,
+      "route_trace": [
+        {
+          "stage": "investigate",
+          "model": "super",
+          "thinking": 256,
+          "cost_usd": 0.007,
+          "cached": false,
+          "escalation_reason": null
+        }
+      ]
+    }
+  ],
+  "mode": "core",
+  "retrieval_receipts": [
+    {
+      "url": "https://packaging.pypa.io/en/stable/version/",
+      "retrieved_at": "2026-10-26T12:20:00Z",
+      "content_hash": "sha256:3e7f0f1990f492e91ec5ff9d87255551f218bd09419b93f2d0f8460a066fefd7",
+      "excerpt": "Core utilities for Python packages (PEP 440).",
+      "request_id": "tvly-pkg-003",
+      "status": "live",
+      "endpoint": "extract",
+      "text": "packaging.version implements PEP 440 version handling.",
+      "response_hash": "sha256:034358b000515842b53ea2e9cc55cdf460ea5d651894c6c538d610109888cf18",
+      "query": "",
+      "credits": 1.0,
+      "credit_status": "reported",
+      "source_version": "24.0",
+      "version_match": true
+    }
+  ],
+  "contracts": [
+    {
+      "contract_id": "packaging.version.roundtrip",
+      "version": 1,
+      "hash": "sha256:d514a3c51e2d9abddaf0d4ce5b1105be791bdb490537f55bd43923c3b2b9a295",
+      "family": "roundtrip",
+      "claim": "Version(str(v)) == v for any valid Version instance.",
+      "status": "explicit",
+      "evidence": [
+        {
+          "source": "https://packaging.pypa.io/en/stable/version/",
+          "excerpt": "PEP 440 version implementation.",
+          "retrieved": "live 2026-10-26T12:20:00Z",
+          "content_hash": "sha256:791feec225500b3b9a280a3d03c6e2706af50cd88d188999565d16181de97466"
+        }
+      ]
+    },
+    {
+      "contract_id": "packaging.specifiers.domain",
+      "version": 1,
+      "hash": "sha256:7c1e2195f5483b48061a9f62c420a84803f485be2911ae50f8c8e62b06f5ea73",
+      "family": "roundtrip",
+      "claim": "SpecifierSet('~=1.0.*') raises InvalidSpecifier",
+      "status": "explicit",
+      "evidence": [
+        {
+          "source": "docs",
+          "excerpt": "Wildcard with compatible release is invalid",
+          "retrieved": "manual",
+          "content_hash": "sha256:9f1ce32773d9767eba14d35afc7f10f0e8b0741bcfa0c4c5dde10b9f5c891b56"
+        }
+      ]
+    }
+  ],
+  "schema_version": 1,
+  "status_counts": {
+    "human_validated": 1,
+    "rejected": 1
+  },
+  "cost_per_validated_finding": 0.36,
+  "tavily_ledger": {
+    "limit": 1000.0,
+    "used": 3.0,
+    "blocked": false,
+    "reported": 3.0,
+    "estimated": 0.0,
+    "pending": 0.0
+  }
+}

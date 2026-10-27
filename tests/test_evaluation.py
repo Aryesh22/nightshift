@@ -85,14 +85,21 @@ def test_compute_metrics_detects_false_positives_and_recalls():
 def test_self_test_runs_deterministically_offline(tmp_path):
     result = run_self_test(out_dir=tmp_path)
     assert isinstance(result, EvaluationResult)
-    assert result.manifest_name == "toycodec-offline-selftest"
-    assert result.task_ids == ["toycodec-selftest"]
+    assert result.manifest_name == "offline-paired-benchmark-5tasks"
+    assert len(result.task_ids) == 5
+    assert set(result.task_ids) == {
+        "toycodec-selftest",
+        "envcodec-selftest",
+        "vercanon-selftest",
+        "iniparser-selftest",
+        "urlcanon-selftest",
+    }
 
     # Core must outperform Baseline on precision, recall, and false positive rate
     assert result.core.report_precision == 1.0
-    assert result.baseline.report_precision == 0.5
+    assert result.baseline.report_precision == 0.375
     assert result.core.known_defect_recall == 1.0
-    assert result.baseline.known_defect_recall == 0.5
+    assert result.baseline.known_defect_recall == 0.6
     assert result.core.false_positive_rate == 0.0
     assert result.baseline.false_positive_rate == 1.0
 
@@ -100,9 +107,9 @@ def test_self_test_runs_deterministically_offline(tmp_path):
     assert result.core.tavily_credits == 0.0
     assert result.baseline.tavily_credits == 0.0
 
-    # Cost per validated finding is lower for core
-    assert result.core.cost_per_validated_finding == 0.05
-    assert result.baseline.cost_per_validated_finding == 0.15
+    # Cost per validated finding is significantly lower for core
+    assert result.core.cost_per_validated_finding == 0.08
+    assert result.baseline.cost_per_validated_finding == 0.20
 
     # Check written outputs
     json_path = tmp_path / "evaluation_report.json"
@@ -111,19 +118,32 @@ def test_self_test_runs_deterministically_offline(tmp_path):
     assert md_path.exists()
 
     d = json.loads(json_path.read_text())
-    assert d["manifest_name"] == "toycodec-offline-selftest"
+    assert d["manifest_name"] == "offline-paired-benchmark-5tasks"
     assert "baseline" in d and "core" in d and "comparison" in d
-    assert d["comparison"]["precision_delta"] == 0.5
-    assert d["comparison"]["recall_delta"] == 0.5
+    assert d["comparison"]["precision_delta"] == 0.625
+    assert d["comparison"]["recall_delta"] == 0.4
     assert d["comparison"]["fpr_delta"] == -1.0
 
     md = md_path.read_text()
-    assert "# Paired Evaluation Summary: toycodec-offline-selftest" in md
+    assert "# Paired Evaluation Summary: offline-paired-benchmark-5tasks" in md
     assert "Report precision" in md
     assert "Known-defect recall" in md
     assert "False-positive rate" in md
     assert "Cost per validated finding" in md
     assert "Airgapped mode verified: 0 external Tavily credits consumed" in md
+
+
+def test_samples_eval_summary_artifacts_exist():
+    summary_path = Path(__file__).resolve().parents[1] / "samples" / "eval_summary.json"
+    md_path = Path(__file__).resolve().parents[1] / "samples" / "EVALUATION.md"
+    assert summary_path.exists(), "samples/eval_summary.json should be generated"
+    assert md_path.exists(), "samples/EVALUATION.md should be generated"
+
+    d = json.loads(summary_path.read_text())
+    assert d["manifest_name"] == "offline-paired-benchmark-5tasks"
+    assert len(d["task_ids"]) == 5
+    assert d["core"]["report_precision"] == 1.0
+    assert d["baseline"]["false_positive_rate"] == 1.0
 
 
 def test_load_manifest_parses_json(tmp_path):
@@ -170,6 +190,6 @@ def test_run_evaluation_cli_self_test(tmp_path):
     assert out_md.exists()
 
     data = json.loads(out_json.read_text())
-    assert data["manifest_name"] == "toycodec-offline-selftest"
+    assert data["manifest_name"] == "offline-paired-benchmark-5tasks"
     assert data["core"]["report_precision"] == 1.0
-    assert data["baseline"]["report_precision"] == 0.5
+    assert data["baseline"]["report_precision"] == 0.375

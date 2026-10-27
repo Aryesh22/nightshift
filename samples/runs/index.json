@@ -1,0 +1,52 @@
+{
+  "runs": [
+    {
+      "run_id": "2026-10-26-081200-core-python-dotenv",
+      "library": "python-dotenv",
+      "version": "1.0.1",
+      "repo": "https://github.com/theskumar/python-dotenv",
+      "mode": "core",
+      "findings_count": 2,
+      "status_counts": {
+        "human_validated": 1,
+        "rejected": 1
+      },
+      "cost_usd": 0.42,
+      "cost_per_validated_finding": 0.42,
+      "filename": "python-dotenv-core.json",
+      "path": "samples/runs/python-dotenv-core.json"
+    },
+    {
+      "run_id": "2026-10-26-092500-core-tomlkit",
+      "library": "tomlkit",
+      "version": "0.12.4",
+      "repo": "https://github.com/sdispater/tomlkit",
+      "mode": "core",
+      "findings_count": 2,
+      "status_counts": {
+        "human_validated": 1,
+        "rejected": 1
+      },
+      "cost_usd": 0.58,
+      "cost_per_validated_finding": 0.58,
+      "filename": "tomlkit-core.json",
+      "path": "samples/runs/tomlkit-core.json"
+    },
+    {
+      "run_id": "2026-10-26-104000-core-packaging",
+      "library": "packaging",
+      "version": "24.0",
+      "repo": "https://github.com/pypa/packaging",
+      "mode": "core",
+      "findings_count": 2,
+      "status_counts": {
+        "human_validated": 1,
+        "rejected": 1
+      },
+      "cost_usd": 0.36,
+      "cost_per_validated_finding": 0.36,
+      "filename": "packaging-core.json",
+      "path": "samples/runs/packaging-core.json"
+    }
+  ]
+}

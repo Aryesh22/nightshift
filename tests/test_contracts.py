@@ -4,9 +4,19 @@ from pathlib import Path
 import pytest
 
 from nightshift.contracts import Contract, Evidence, Harness, HarnessRejected, classify, render_test
-from nightshift.contracts.library import BASE64_HARNESS, BASE64_ROUNDTRIP
+from nightshift.contracts.library import (
+    BASE64_HARNESS,
+    BASE64_ROUNDTRIP,
+    IDNA_HARNESS,
+    IDNA_ROUNDTRIP,
+    JSON_HARNESS,
+    JSON_ROUNDTRIP,
+    URLLIB_HARNESS,
+    URLLIB_ROUNDTRIP,
+)
 from nightshift.contracts.runner import run_contract
 from nightshift.sandbox.local import UnsafeLocalSandbox
+
 
 FIXTURES = str(Path(__file__).parent / "fixtures")
 EVIDENCE = (Evidence.manual("toycodec docs", "decode(encode(d)) returns d"),)
@@ -106,3 +116,25 @@ def test_revision_is_traceable_and_ambiguous_contracts_are_refused():
         BASE64_ROUNDTRIP.revise("  ")
     with pytest.raises(HarnessRejected):
         render_test(BASE64_ROUNDTRIP.revise("unclear", status="ambiguous"), BASE64_HARNESS)
+
+
+async def test_json_dumps_loads_roundtrip_contract_passes():
+    out = await run(JSON_ROUNDTRIP, JSON_HARNESS, max_examples=30)
+    assert out.kind == "passed", out.reason
+    assert out.stats["assertion_reached"] >= 30
+    assert all(n > 0 for n in out.stats["api_calls"].values())
+
+
+async def test_urllib_quote_unquote_roundtrip_contract_passes():
+    out = await run(URLLIB_ROUNDTRIP, URLLIB_HARNESS, max_examples=30)
+    assert out.kind == "passed", out.reason
+    assert out.stats["assertion_reached"] >= 30
+    assert all(n > 0 for n in out.stats["api_calls"].values())
+
+
+async def test_idna_encode_decode_roundtrip_contract_passes():
+    out = await run(IDNA_ROUNDTRIP, IDNA_HARNESS, max_examples=30)
+    assert out.kind == "passed", out.reason
+    assert out.stats["assertion_reached"] >= 30
+    assert all(n > 0 for n in out.stats["api_calls"].values())
+

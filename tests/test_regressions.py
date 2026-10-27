@@ -386,3 +386,13 @@ async def test_docker_run_wraps_the_command_in_timeout_and_keeps_the_environment
     assert seen['args'][:4] == ('exec', 'c1', 'sh', '-c') and seen['args'][4].startswith('timeout -k 2 5 sh -c ')
     assert seen['timeout_s'] == 20 and seen['container'] == 'c1'
     assert 'c1' in sandbox._envs
+
+
+def test_core_finding_cost_excludes_the_shared_contract_extraction_call():
+    """Two findings must not each be charged the one contract-extraction call."""
+    import inspect
+    from nightshift.pipeline import core
+    source = inspect.getsource(core.run_core)
+    assert 'finding.route_trace.extend(strategy_trace)' in source
+    assert 'extend([*extraction_trace' not in source
+    assert 'payload["shared_cost_usd"]' in source

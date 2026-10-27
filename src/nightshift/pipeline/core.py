@@ -79,6 +79,7 @@ async def run_core(config, client, sandbox, *, tavily=None):
                        retrieval_failures=tavily.failures if tavily else [],
                        campaigns=campaigns, contracts=[c.to_dict() for c in contracts],
                        harness_approvals=approvals, model_trace=[asdict(t) for t in traces], errors=errors)
+        payload["shared_cost_usd"] = round(sum(t.cost_usd for t in traces if t.stage == "contract"), 6)
         payload["ultra_allowance"] = {"limit_usd": config.ultra_budget_usd, "exposure_usd": ultra_spend,
                                       "reviewed_survivors": ultra_survivors, "survivor_limit": config.ultra_max_survivors}
         payload["stats"].update(body_entries=sum((c.get("stats") or {}).get("entered", 0) for c in campaigns),
@@ -184,7 +185,9 @@ async def run_core(config, client, sandbox, *, tavily=None):
                                         [EvidenceRef(e.source, e.excerpt, e.retrieved, getattr(e, "content_hash", "")) for e in contract.evidence]),
                             repro=code, actual=failure.get("actual", failure.get("error", outcome.reason)),
                             expected=failure.get("expected", contract.claim))
-                        finding.route_trace.extend([*extraction_trace, *strategy_trace])
+                        # Only this finding's own calls; contract extraction is shared by every
+                        # finding and is reported once at run level (shared_cost_usd).
+                        finding.route_trace.extend(strategy_trace)
                         report.findings.append(finding)
                         checkpoint()
                         try:

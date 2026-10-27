@@ -1,0 +1,79 @@
+{
+  "tasks": [
+    {
+      "task_id": "toycodec-benchmark",
+      "repo_url": "https://github.com/example/toycodec",
+      "package": "toycodec",
+      "ref": "main",
+      "library": "toycodec",
+      "doc_paths": ["README.md"],
+      "known_defects": ["decode drops trailing whitespace"],
+      "hard_negatives": ["empty range string outside contract"],
+      "setup_cmds": ["pip install -q -e ."],
+      "budget_usd": 0.50,
+      "variants_per_target": 2,
+      "max_targets": 4,
+      "max_examples": 200
+    },
+    {
+      "task_id": "envcodec-benchmark",
+      "repo_url": "https://github.com/example/envcodec",
+      "package": "envcodec",
+      "ref": "main",
+      "library": "envcodec",
+      "doc_paths": ["README.md"],
+      "known_defects": ["env_quote_unescaped_value"],
+      "hard_negatives": ["env_comment_stripping"],
+      "setup_cmds": ["pip install -q -e ."],
+      "budget_usd": 0.50,
+      "variants_per_target": 2,
+      "max_targets": 4,
+      "max_examples": 200
+    },
+    {
+      "task_id": "vercanon-benchmark",
+      "repo_url": "https://github.com/example/vercanon",
+      "package": "vercanon",
+      "ref": "main",
+      "library": "vercanon",
+      "doc_paths": ["README.md"],
+      "known_defects": ["version_prerelease_separator"],
+      "hard_negatives": ["version_build_metadata"],
+      "setup_cmds": ["pip install -q -e ."],
+      "budget_usd": 0.50,
+      "variants_per_target": 2,
+      "max_targets": 4,
+      "max_examples": 200
+    },
+    {
+      "task_id": "iniparser-benchmark",
+      "repo_url": "https://github.com/example/iniparser",
+      "package": "iniparser",
+      "ref": "main",
+      "library": "iniparser",
+      "doc_paths": ["README.md"],
+      "known_defects": ["ini_multiline_indent_loss"],
+      "hard_negatives": ["ini_inline_comment"],
+      "setup_cmds": ["pip install -q -e ."],
+      "budget_usd": 0.50,
+      "variants_per_target": 2,
+      "max_targets": 4,
+      "max_examples": 200
+    },
+    {
+      "task_id": "urlcanon-benchmark",
+      "repo_url": "https://github.com/example/urlcanon",
+      "package": "urlcanon",
+      "ref": "main",
+      "library": "urlcanon",
+      "doc_paths": ["README.md"],
+      "known_defects": [],
+      "hard_negatives": ["url_query_tilde_encoding"],
+      "setup_cmds": ["pip install -q -e ."],
+      "budget_usd": 0.50,
+      "variants_per_target": 2,
+      "max_targets": 4,
+      "max_examples": 200
+    }
+  ]
+}

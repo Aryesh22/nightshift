@@ -50,34 +50,34 @@
         {
           "question": "Does a documented normal input work in this environment?",
           "tool": "run_control_input",
-          "result": "{\"execution\": {\"exit_code\": 0, \"output\": \"\", \"status\": \"pass\"}, \"kind\": \"passed\", \"low_reach\": false, \"reach_rate\": 1.0, \"reason\": \"passed\", \"stats\": {\"assertion_reached\": 1, \"entered\": 1, \"precondition_ok\": 1}}",
+          "result": "{\"execution\": {\"exit_code\": 0, \"output\": \"\", \"status\": \"pass\"}, \"kind\": \"passed\", \"reach_rate\": 1.0}",
           "effect": "supports"
         },
         {
-          "question": "Does the pinned documentation and source support the claimed semantics?",
+          "question": "Does the pinned documentation support claimed semantics?",
           "tool": "inspect_doc_and_source",
-          "result": "{\"contract_evidence\": [{\"content_hash\": \"sha256:dc4063656bebb728fd864d418242df5ba1df435851f313ffc126c6363e8baf8f\", \"excerpt\": \"decode() is the exact inverse of encode().\", \"retrieved\": \"live 2026-10-23T02:14:00Z\", \"source\": \"https://fakelib.readthedocs.io/en/1.4.2/api.html#fakelib.decode\"}], \"docstring\": \"Values may be any str; ' ' is allowed. Docs mention no whitespace stripping.\", \"package_revision\": \"1.4.2\", \"path\": \"fakelib/codec.py\", \"source\": \"def decode(text: str) -> dict:\\n    pairs = (line.partition('=') for line in text.splitlines() if line)\\n    return {k: v.strip() for k, _, v in pairs}\\n\", \"source_hash\": \"sha256:29ddfbcf53e833213ccbcff14aa01655c5cbcea5cfffe5bb379a7b26c4d12493\", \"symbol\": \"fakelib.decode\"}",
+          "result": "{\"docstring\": \"Values may be any str; ' ' is allowed.\", \"path\": \"fakelib/codec.py\"}",
           "effect": "supports"
         },
         {
           "question": "Is the discrepancy localized around the reduced boundary?",
           "tool": "check_boundary_neighborhood",
-          "result": "{\"inputs\": [\"{'a': 'b'}\", \"{'a': ''}\"], \"original_input_preserved\": \"{'a': ' '}\", \"outcome\": {\"execution\": {\"exit_code\": 0, \"output\": \"\", \"status\": \"pass\"}, \"kind\": \"passed\", \"low_reach\": false, \"reach_rate\": 1.0, \"reason\": \"passed\", \"stats\": {\"assertion_reached\": 2, \"entered\": 2, \"precondition_ok\": 2}}}",
+          "result": "{\"inputs\": [\"{'a': 'b'}\", \"{'a': ''}\"], \"outcome\": {\"kind\": \"passed\"}}",
           "effect": "supports"
         },
         {
           "question": "Has this whitespace-dropping issue already been reported upstream?",
           "tool": "search_known_issues_tavily",
-          "result": "{\"extracted\": [], \"failures\": [], \"outcome\": \"no_match_found\", \"query\": \"https://github.com/example/fakelib/ fakelib.decode fakelib.encode strip whitespace\", \"search\": []}",
+          "result": "{\"outcome\": \"no_match_found\", \"query\": \"fakelib decode strip whitespace\"}",
           "effect": "neutral"
         }
       ],
       "known_behaviour": {
         "outcome": "no_match_found",
         "links": [],
-        "note": "Searched issues and changelog for 'strip', 'whitespace'. Not proof it is new."
+        "note": "Searched issues for whitespace stripping."
       },
-      "uncertainty": "Maintainers may consider stripping intentional; the docs do not say so.",
+      "uncertainty": "Maintainers may consider stripping intentional; docs do not say so.",
       "rejection_reason": null,
       "root_cause": "decode() calls .strip() on each value (codec.py:44) but encode() never escapes whitespace.",
       "patch_diff": "--- a/fakelib/codec.py\n+++ b/fakelib/codec.py\n@@ -44 +44 @@\n-    return {k: v.strip() for k, _, v in pairs}\n+    return {k: v for k, _, v in pairs}\n",
@@ -149,25 +149,25 @@
         {
           "question": "Does slugify_fast agree with slugify on single spaces?",
           "tool": "run_control_input",
-          "result": "{\"execution\": {\"exit_code\": 0, \"output\": \"\", \"status\": \"pass\"}, \"kind\": \"passed\", \"low_reach\": false, \"reach_rate\": 1.0, \"reason\": \"passed\", \"stats\": {\"assertion_reached\": 1, \"entered\": 1, \"precondition_ok\": 1}}",
+          "result": "{\"kind\": \"passed\"}",
           "effect": "supports"
         },
         {
           "question": "Is slugify_fast documented as equivalent?",
           "tool": "inspect_doc_and_source",
-          "result": "{\"contract_evidence\": [{\"content_hash\": \"sha256:49e67ab321eae757b39597fd372e9e5be3754e80b64d4cb0c61c0415d70a29a4\", \"excerpt\": \"A faster drop-in replacement for slugify().\", \"retrieved\": \"live 2026-10-23T02:15:00Z\", \"source\": \"https://fakelib.readthedocs.io/en/1.4.2/api.html#fakelib.slugify_fast\"}], \"docstring\": \"A faster drop-in replacement for slugify().\", \"package_revision\": \"1.4.2\", \"path\": \"fakelib/slug.py\", \"source\": \"def slugify_fast(s: str) -> str:\\n    return s.lower().replace(' ', '-')\\n\", \"source_hash\": \"sha256:39f05fa0ef030d5e695d2658628a5baac40de930c55e9561c3c874cc41451491\", \"symbol\": \"fakelib.slugify_fast\"}",
+          "result": "{\"doc\": \"drop-in replacement\"}",
           "effect": "supports"
         },
         {
-          "question": "Is the discrepancy specific to multiple adjacent spaces?",
+          "question": "Is the discrepancy specific to adjacent spaces?",
           "tool": "check_boundary_neighborhood",
-          "result": "{\"inputs\": [\"'a b'\", \"'ab'\"], \"original_input_preserved\": \"'a  b'\", \"outcome\": {\"execution\": {\"exit_code\": 0, \"output\": \"\", \"status\": \"pass\"}, \"kind\": \"passed\", \"low_reach\": false, \"reach_rate\": 1.0, \"reason\": \"passed\", \"stats\": {\"assertion_reached\": 2, \"entered\": 2, \"precondition_ok\": 2}}}",
+          "result": "{\"inputs\": [\"'a b'\"]}",
           "effect": "supports"
         },
         {
-          "question": "Are there existing issues about slugify_fast space handling?",
+          "question": "Are there existing issues about space handling?",
           "tool": "search_known_issues_tavily",
-          "result": "{\"extracted\": [{\"content_hash\": \"sha256:05fbb12fad04af47b0e9a6ad033be3aa2472ba1b6df5805dc70a461ec1a04508\", \"credit_status\": \"reported\", \"credits\": 1.0, \"endpoint\": \"search\", \"excerpt\": \"Issue #88: slugify with tab characters produces unexpected output.\", \"query\": \"https://github.com/example/fakelib/ slugify whitespace tab\", \"request_id\": \"tvly-req-search-91304\", \"response_hash\": \"sha256:871a12c4f7f9427b0930c5998f5b9f80dad4d1b3e466e8741ca167d1a80670d8\", \"retrieved_at\": \"2026-10-23T02:15:30Z\", \"source_version\": null, \"status\": \"live\", \"text\": \"Discussion on Issue #88 regarding slugify whitespace normalization with tabs vs spaces.\", \"url\": \"https://github.com/example/fakelib/issues/88\", \"version_match\": false}], \"failures\": [], \"outcome\": \"related_issue\", \"query\": \"https://github.com/example/fakelib/ slugify whitespace tab\", \"search\": [{\"content_hash\": \"sha256:05fbb12fad04af47b0e9a6ad033be3aa2472ba1b6df5805dc70a461ec1a04508\", \"credit_status\": \"reported\", \"credits\": 1.0, \"endpoint\": \"search\", \"excerpt\": \"Issue #88: slugify with tab characters produces unexpected output.\", \"query\": \"https://github.com/example/fakelib/ slugify whitespace tab\", \"request_id\": \"tvly-req-search-91304\", \"response_hash\": \"sha256:871a12c4f7f9427b0930c5998f5b9f80dad4d1b3e466e8741ca167d1a80670d8\", \"retrieved_at\": \"2026-10-23T02:15:30Z\", \"source_version\": null, \"status\": \"live\", \"text\": \"Discussion on Issue #88 regarding slugify whitespace normalization with tabs vs spaces.\", \"url\": \"https://github.com/example/fakelib/issues/88\", \"version_match\": false}]}",
+          "result": "{\"outcome\": \"related_issue\"}",
           "effect": "supports"
         }
       ],
@@ -234,25 +234,25 @@
         {
           "question": "Does merge work for basic non-nested dicts?",
           "tool": "run_control_input",
-          "result": "{\"execution\": {\"exit_code\": 0, \"output\": \"\", \"status\": \"pass\"}, \"kind\": \"passed\", \"low_reach\": false, \"reach_rate\": 1.0, \"reason\": \"passed\", \"stats\": {\"assertion_reached\": 1, \"entered\": 1, \"precondition_ok\": 1}}",
+          "result": "{\"kind\": \"passed\"}",
           "effect": "supports"
         },
         {
           "question": "Do the docs promise associativity for nested lists?",
           "tool": "inspect_doc_and_source",
-          "result": "{\"contract_evidence\": [{\"content_hash\": \"sha256:ec1ad0bfbfadbd64c1fff10bb57b14ca0ddca73cd1a2078dce6d1a36e1737e09\", \"excerpt\": \"Merging is order-independent for list values.\", \"retrieved\": \"cache 2026-10-23T02:15:00Z\", \"source\": \"https://fakelib.readthedocs.io/en/1.4.2/api.html#fakelib.merge\"}], \"docstring\": \"Merging is order-independent for list values. May refer only to commutativity of keys.\", \"package_revision\": \"1.4.2\", \"path\": \"fakelib/merge.py\", \"source\": \"def merge(a: dict, b: dict) -> dict:\\n    ...\\n\", \"source_hash\": \"sha256:e91090162c539e2d8544e27b27d5a719515086f1353c494c2ccad687c115bc07\", \"symbol\": \"fakelib.merge\"}",
+          "result": "{\"doc\": \"order-independent\"}",
           "effect": "neutral"
         },
         {
           "question": "Does associativity hold for flat list elements?",
           "tool": "check_boundary_neighborhood",
-          "result": "{\"inputs\": [\"{'k': [1, 2]}\", \"{'k': [2, 3]}\"], \"original_input_preserved\": \"{'k': [1]}\", \"outcome\": {\"execution\": {\"exit_code\": 0, \"output\": \"\", \"status\": \"pass\"}, \"kind\": \"passed\", \"low_reach\": false, \"reach_rate\": 1.0, \"reason\": \"passed\", \"stats\": {\"assertion_reached\": 2, \"entered\": 2, \"precondition_ok\": 2}}}",
+          "result": "{\"kind\": \"passed\"}",
           "effect": "neutral"
         },
         {
           "question": "Has nested list associativity been clarified upstream?",
           "tool": "search_known_issues_tavily",
-          "result": "{\"extracted\": [], \"failures\": [], \"outcome\": \"lookup_unavailable\", \"query\": \"https://github.com/example/fakelib/ fakelib.merge nested list associativity\", \"search\": []}",
+          "result": "{\"outcome\": \"lookup_unavailable\"}",
           "effect": "neutral"
         }
       ],
@@ -303,27 +303,27 @@
       "replays_attempted": 0,
       "checks": [
         {
-          "question": "Does a documented normal input format work in this environment?",
+          "question": "Does a documented normal input format work?",
           "tool": "run_control_input",
-          "result": "{\"execution\": {\"exit_code\": 0, \"output\": \"\", \"status\": \"pass\"}, \"kind\": \"passed\", \"low_reach\": false, \"reach_rate\": 1.0, \"reason\": \"passed\", \"stats\": {\"assertion_reached\": 1, \"entered\": 1, \"precondition_ok\": 1}}",
+          "result": "{\"kind\": \"passed\"}",
           "effect": "supports"
         },
         {
-          "question": "Does the documentation declare empty string as a valid range?",
+          "question": "Does documentation declare empty string as valid?",
           "tool": "inspect_doc_and_source",
-          "result": "{\"contract_evidence\": [{\"content_hash\": \"sha256:dc1af4de6f16af176d55cf2043105634da0a2c8d422577c993504151002245c8\", \"excerpt\": \"parse_range(r) expects a non-empty range string.\", \"retrieved\": \"live 2026-10-23T02:16:00Z\", \"source\": \"https://fakelib.readthedocs.io/en/1.4.2/api.html#fakelib.parse_range\"}], \"docstring\": \"parse_range(r): r must be a non-empty range string formatted as 'start-end'.\", \"package_revision\": \"1.4.2\", \"path\": \"fakelib/ranges.py\", \"source\": \"def parse_range(r: str) -> tuple[int, int]:\\n    if not r:\\n        raise ValueError('range string cannot be empty')\\n\", \"source_hash\": \"sha256:dd3b5b5e3f8f03aee98163663ee7daef54661924722b8dfd8aa51e24362b37fb\", \"symbol\": \"fakelib.parse_range\"}",
+          "result": "{\"doc\": \"must be non-empty\"}",
           "effect": "refutes"
         },
         {
-          "question": "Does the failure persist for non-empty boundary inputs?",
+          "question": "Does failure persist for non-empty boundary inputs?",
           "tool": "check_boundary_neighborhood",
-          "result": "{\"inputs\": [\"'0-1'\", \"'1-1'\"], \"original_input_preserved\": \"''\", \"outcome\": {\"execution\": {\"exit_code\": 0, \"output\": \"\", \"status\": \"pass\"}, \"kind\": \"passed\", \"low_reach\": false, \"reach_rate\": 1.0, \"reason\": \"passed\", \"stats\": {\"assertion_reached\": 2, \"entered\": 2, \"precondition_ok\": 2}}}",
+          "result": "{\"kind\": \"passed\"}",
           "effect": "neutral"
         },
         {
-          "question": "Are there existing issues discussing empty range string handling?",
+          "question": "Are there existing issues discussing empty range string?",
           "tool": "search_known_issues_tavily",
-          "result": "{\"extracted\": [{\"content_hash\": \"sha256:544ffdd6d62b03c4e74e900c1ea8ab896f2ab3fa84317201a44c96538b43a850\", \"excerpt\": \"Empty input string raises ValueError by design\", \"url\": \"https://github.com/example/fakelib/issues/12\"}], \"failures\": [], \"outcome\": \"related_issue\", \"query\": \"https://github.com/example/fakelib/ fakelib.parse_range empty string ValueError\", \"search\": [{\"url\": \"https://github.com/example/fakelib/issues/12\"}]}",
+          "result": "{\"outcome\": \"related_issue\"}",
           "effect": "refutes"
         }
       ],
@@ -346,6 +346,7 @@
       ]
     }
   ],
+  "mode": "core",
   "retrieval_receipts": [
     {
       "url": "https://fakelib.readthedocs.io/en/1.4.2/api.html#fakelib.decode",

@@ -29,3 +29,27 @@ def test_cost_per_validated_finding_is_undefined_without_validated_findings():
     assert report.cost_per_validated_finding == report.stats.cost_usd  # exactly one validated
     report.findings = [f for f in report.findings if f.status != "human_validated"]
     assert report.to_dict()["cost_per_validated_finding"] is None
+
+
+def test_all_sample_runs_load_cleanly():
+    runs_dir = Path(__file__).parents[1] / "samples" / "runs"
+    expected_files = [
+        SAMPLE,
+        runs_dir / "python-dotenv-core.json",
+        runs_dir / "tomlkit-core.json",
+        runs_dir / "packaging-core.json",
+    ]
+    for path in expected_files:
+        assert path.exists(), f"Missing {path}"
+        data = json.loads(path.read_text())
+        rep = Report.from_dict(data)
+        assert rep.run_id
+        assert len(rep.findings) > 0
+        assert rep.mode == "core"
+
+    # Also verify index.json
+    index_path = runs_dir / "index.json"
+    assert index_path.exists()
+    index_data = json.loads(index_path.read_text())
+    assert len(index_data["runs"]) == 3
+

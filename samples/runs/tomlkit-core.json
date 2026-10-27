@@ -1,0 +1,234 @@
+{
+  "run_id": "2026-10-26-092500-core-tomlkit",
+  "library": {
+    "name": "tomlkit",
+    "version": "0.12.4",
+    "repo": "https://github.com/sdispater/tomlkit"
+  },
+  "stats": {
+    "contracts": 5,
+    "campaigns": 11,
+    "infra_failures": 1,
+    "cost_usd": 0.58,
+    "tavily_credits": 5.0,
+    "human_review_minutes": 12.0
+  },
+  "cost_by_model": {
+    "lightning": 0.16,
+    "super": 0.26,
+    "ultra": 0.16
+  },
+  "findings": [
+    {
+      "id": "tomlkit_f1",
+      "title": "Inline table comment loss during serialization roundtrip",
+      "status": "human_validated",
+      "contract": {
+        "contract_id": "tomlkit.dumps.roundtrip",
+        "version": 1,
+        "hash": "sha256:099777914228b869ba84541e722b9b76e57ebf103db884640d6e96960583ee42",
+        "family": "roundtrip",
+        "claim": "parse(dumps(doc)) == doc while preserving comments and whitespace.",
+        "status": "explicit",
+        "evidence": [
+          {
+            "source": "https://tomlkit.readthedocs.io/en/latest/",
+            "excerpt": "Style-preserving TOML library.",
+            "retrieved": "live 2026-10-26T12:10:00Z",
+            "content_hash": "sha256:0e8fb90fe189f69bae0ff3710999bfd251d06662dd8d0ee79f7bd78042592450"
+          }
+        ]
+      },
+      "repro": "import tomlkit\ns = 'table = { a = 1 # comment\\n }'\nprint(tomlkit.dumps(tomlkit.parse(s)))",
+      "actual": "'table = { a = 1 }'",
+      "expected": "table = { a = 1 # comment\\n }",
+      "traceback": "",
+      "control": "'table = { a = 1 }' roundtrips cleanly",
+      "replays_passed": 3,
+      "replays_attempted": 3,
+      "checks": [
+        {
+          "question": "Does plain inline table roundtrip?",
+          "tool": "run_control_input",
+          "result": "{\"kind\": \"passed\"}",
+          "effect": "supports"
+        },
+        {
+          "question": "Do docs promise comment preservation for inline tables?",
+          "tool": "inspect_doc_and_source",
+          "result": "{\"doc\": \"preserves all comments and indentation\"}",
+          "effect": "supports"
+        },
+        {
+          "question": "Check multiline comment neighborhood",
+          "tool": "check_boundary_neighborhood",
+          "result": "{\"inputs\": [\"table = { a = 1 }\"]}",
+          "effect": "supports"
+        },
+        {
+          "question": "Search known issues on inline comments",
+          "tool": "search_known_issues_tavily",
+          "result": "{\"outcome\": \"no_match_found\"}",
+          "effect": "neutral"
+        }
+      ],
+      "known_behaviour": {
+        "outcome": "no_match_found",
+        "links": [],
+        "note": "No matching closed issue found."
+      },
+      "uncertainty": "",
+      "rejection_reason": null,
+      "root_cause": "InlineTable parser discards tokens of type Comment inside braces.",
+      "patch_diff": null,
+      "patch_validation": null,
+      "cost_usd": 0.058,
+      "route_trace": [
+        {
+          "stage": "contract",
+          "model": "lightning",
+          "thinking": 0,
+          "cost_usd": 0.003,
+          "cached": false,
+          "escalation_reason": null
+        },
+        {
+          "stage": "investigate",
+          "model": "super",
+          "thinking": 512,
+          "cost_usd": 0.025,
+          "cached": false,
+          "escalation_reason": null
+        },
+        {
+          "stage": "review",
+          "model": "ultra",
+          "thinking": 1024,
+          "cost_usd": 0.03,
+          "cached": false,
+          "escalation_reason": null
+        }
+      ]
+    },
+    {
+      "id": "tomlkit_f2",
+      "title": "Bare key with space raises ParseError",
+      "status": "rejected",
+      "contract": {
+        "contract_id": "tomlkit.key.domain",
+        "version": 1,
+        "hash": "sha256:fabe2b0ee39dea3118debaf7e985c26fa5508aed9f30b1469a31abd53890f110",
+        "family": "roundtrip",
+        "claim": "parse('a.b = 1') parses dotted keys.",
+        "status": "explicit",
+        "evidence": [
+          {
+            "source": "docs",
+            "excerpt": "Dotted keys are supported in TOML v1.0.0",
+            "retrieved": "manual",
+            "content_hash": "sha256:2492525cae74c6d791a8835ff324530a965b71ae90d6949e21875f595ee74871"
+          }
+        ]
+      },
+      "repro": "import tomlkit\ntomlkit.parse('key with space = 1')",
+      "actual": "ParseError: Invalid key",
+      "expected": "Parsed dict",
+      "traceback": "",
+      "control": "",
+      "replays_passed": 0,
+      "replays_attempted": 0,
+      "checks": [
+        {
+          "question": "Does TOML spec permit spaces in bare keys?",
+          "tool": "inspect_doc_and_source",
+          "result": "{\"doc\": \"bare keys may contain only A-Za-z0-9_-\"}",
+          "effect": "refutes"
+        }
+      ],
+      "known_behaviour": null,
+      "uncertainty": "",
+      "rejection_reason": "Bare keys cannot contain spaces under TOML v1.0.0 specification.",
+      "root_cause": null,
+      "patch_diff": null,
+      "patch_validation": null,
+      "cost_usd": 0.009,
+      "route_trace": [
+        {
+          "stage": "investigate",
+          "model": "super",
+          "thinking": 256,
+          "cost_usd": 0.009,
+          "cached": false,
+          "escalation_reason": null
+        }
+      ]
+    }
+  ],
+  "mode": "core",
+  "retrieval_receipts": [
+    {
+      "url": "https://tomlkit.readthedocs.io/en/latest/",
+      "retrieved_at": "2026-10-26T12:10:00Z",
+      "content_hash": "sha256:2d4d99791bf987a4e25edbd5e73fc2d45c0f96f45ee5604a1d170bd08fdb2ad8",
+      "excerpt": "Style-preserving TOML library for Python.",
+      "request_id": "tvly-tomlkit-002",
+      "status": "live",
+      "endpoint": "extract",
+      "text": "tomlkit is a 1.0.0-compliant TOML library with full style-preservation support.",
+      "response_hash": "sha256:0da5984e137874418c0cfe523cc852dcac455988da1fbf7f75e20dbbbb36d793",
+      "query": "",
+      "credits": 1.0,
+      "credit_status": "reported",
+      "source_version": "0.12.4",
+      "version_match": true
+    }
+  ],
+  "contracts": [
+    {
+      "contract_id": "tomlkit.dumps.roundtrip",
+      "version": 1,
+      "hash": "sha256:099777914228b869ba84541e722b9b76e57ebf103db884640d6e96960583ee42",
+      "family": "roundtrip",
+      "claim": "parse(dumps(doc)) == doc while preserving comments and whitespace.",
+      "status": "explicit",
+      "evidence": [
+        {
+          "source": "https://tomlkit.readthedocs.io/en/latest/",
+          "excerpt": "Style-preserving TOML library.",
+          "retrieved": "live 2026-10-26T12:10:00Z",
+          "content_hash": "sha256:0e8fb90fe189f69bae0ff3710999bfd251d06662dd8d0ee79f7bd78042592450"
+        }
+      ]
+    },
+    {
+      "contract_id": "tomlkit.key.domain",
+      "version": 1,
+      "hash": "sha256:fabe2b0ee39dea3118debaf7e985c26fa5508aed9f30b1469a31abd53890f110",
+      "family": "roundtrip",
+      "claim": "parse('a.b = 1') parses dotted keys.",
+      "status": "explicit",
+      "evidence": [
+        {
+          "source": "docs",
+          "excerpt": "Dotted keys are supported in TOML v1.0.0",
+          "retrieved": "manual",
+          "content_hash": "sha256:2492525cae74c6d791a8835ff324530a965b71ae90d6949e21875f595ee74871"
+        }
+      ]
+    }
+  ],
+  "schema_version": 1,
+  "status_counts": {
+    "human_validated": 1,
+    "rejected": 1
+  },
+  "cost_per_validated_finding": 0.58,
+  "tavily_ledger": {
+    "limit": 1000.0,
+    "used": 5.0,
+    "blocked": false,
+    "reported": 5.0,
+    "estimated": 0.0,
+    "pending": 0.0
+  }
+}

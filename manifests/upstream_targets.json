@@ -1,0 +1,54 @@
+{
+  "targets": [
+    {
+      "name": "python-dotenv",
+      "package": "dotenv",
+      "repo_url": "https://github.com/theskumar/python-dotenv",
+      "ref": "v1.0.1",
+      "doc_paths": ["README.md", "docs/index.md"],
+      "target_modules": ["dotenv.main", "dotenv.parser"],
+      "candidate_relation_families": ["roundtrip", "equivalent"],
+      "description": "Reads key-value pairs from .env file and sets them as environment variables."
+    },
+    {
+      "name": "packaging",
+      "package": "packaging",
+      "repo_url": "https://github.com/pypa/packaging",
+      "ref": "24.0",
+      "doc_paths": ["docs/index.rst", "docs/version.rst"],
+      "target_modules": ["packaging.version", "packaging.specifiers", "packaging.tags"],
+      "candidate_relation_families": ["roundtrip", "equivalent"],
+      "description": "Core utilities for Python packages, implements PEP 440 version parsing and specifiers."
+    },
+    {
+      "name": "tomlkit",
+      "package": "tomlkit",
+      "repo_url": "https://github.com/sdispater/tomlkit",
+      "ref": "0.12.4",
+      "doc_paths": ["README.md", "docs/index.md"],
+      "target_modules": ["tomlkit.api", "tomlkit.parser", "tomlkit.dump"],
+      "candidate_relation_families": ["roundtrip", "equivalent"],
+      "description": "Style-preserving TOML parser and serializer maintaining comments and whitespace."
+    },
+    {
+      "name": "iniconfig",
+      "package": "iniconfig",
+      "repo_url": "https://github.com/pytest-dev/iniconfig",
+      "ref": "v2.0.0",
+      "doc_paths": ["README.txt"],
+      "target_modules": ["iniconfig"],
+      "candidate_relation_families": ["roundtrip"],
+      "description": "Brain-dead simple INI-file parsing library used by pytest."
+    },
+    {
+      "name": "jmespath",
+      "package": "jmespath",
+      "repo_url": "https://github.com/jmespath/jmespath.py",
+      "ref": "1.0.1",
+      "doc_paths": ["README.rst"],
+      "target_modules": ["jmespath.parser", "jmespath.visitor"],
+      "candidate_relation_families": ["equivalent", "roundtrip"],
+      "description": "Declaratively specify how to extract elements from a JSON document."
+    }
+  ]
+}

@@ -222,3 +222,6 @@ __marimo__/
 # Nightshift
 .nightshift/
 runs/
+!samples/runs/
+
+*.zip

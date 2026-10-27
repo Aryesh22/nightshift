@@ -1,0 +1,234 @@
+{
+  "run_id": "2026-10-26-081200-core-python-dotenv",
+  "library": {
+    "name": "python-dotenv",
+    "version": "1.0.1",
+    "repo": "https://github.com/theskumar/python-dotenv"
+  },
+  "stats": {
+    "contracts": 4,
+    "campaigns": 8,
+    "infra_failures": 0,
+    "cost_usd": 0.42,
+    "tavily_credits": 4.0,
+    "human_review_minutes": 8.0
+  },
+  "cost_by_model": {
+    "lightning": 0.12,
+    "super": 0.2,
+    "ultra": 0.1
+  },
+  "findings": [
+    {
+      "id": "dotenv_f1",
+      "title": "dotenv_values drops internal quotes in double-quoted values",
+      "status": "human_validated",
+      "contract": {
+        "contract_id": "dotenv.parse.roundtrip",
+        "version": 1,
+        "hash": "sha256:cc12ba07b285b611000eca8921f98436add095fd552e2d4b5eeb7f11470be203",
+        "family": "roundtrip",
+        "claim": "dotenv_values(stream) round-trips serialize_env(mapping) for valid mappings.",
+        "status": "explicit",
+        "evidence": [
+          {
+            "source": "https://github.com/theskumar/python-dotenv/blob/v1.0.1/README.md",
+            "excerpt": "Key-value pairs can be parsed from and written to env files.",
+            "retrieved": "live 2026-10-26T12:00:00Z",
+            "content_hash": "sha256:27971da4a000accce748e6f7636612c06081b1fe9b3700d7b3d632fb630fdd9f"
+          }
+        ]
+      },
+      "repro": "import io\nfrom dotenv import dotenv_values\nstream = io.StringIO('KEY=\"val\"quote\"')\nprint(dotenv_values(stream_=stream))",
+      "actual": "{'KEY': 'val'}",
+      "expected": "{'KEY': 'val\"quote'}",
+      "traceback": "",
+      "control": "{'KEY': 'plain_value'} parses correctly",
+      "replays_passed": 3,
+      "replays_attempted": 3,
+      "checks": [
+        {
+          "question": "Does plain value parse correctly?",
+          "tool": "run_control_input",
+          "result": "{\"kind\": \"passed\"}",
+          "effect": "supports"
+        },
+        {
+          "question": "Does documentation allow internal quotes?",
+          "tool": "inspect_doc_and_source",
+          "result": "{\"doc\": \"supports escaped quotes\"}",
+          "effect": "supports"
+        },
+        {
+          "question": "Check single quote boundary neighborhood",
+          "tool": "check_boundary_neighborhood",
+          "result": "{\"inputs\": [\"'val\\\\'quote'\"]}",
+          "effect": "supports"
+        },
+        {
+          "question": "Search known issues on quote escaping",
+          "tool": "search_known_issues_tavily",
+          "result": "{\"outcome\": \"no_match_found\"}",
+          "effect": "neutral"
+        }
+      ],
+      "known_behaviour": {
+        "outcome": "no_match_found",
+        "links": [],
+        "note": "No matching issue on internal unescaped quote truncation."
+      },
+      "uncertainty": "",
+      "rejection_reason": null,
+      "root_cause": "Regex parser matches up to next unescaped quote without lookahead.",
+      "patch_diff": null,
+      "patch_validation": null,
+      "cost_usd": 0.042,
+      "route_trace": [
+        {
+          "stage": "contract",
+          "model": "lightning",
+          "thinking": 0,
+          "cost_usd": 0.002,
+          "cached": false,
+          "escalation_reason": null
+        },
+        {
+          "stage": "investigate",
+          "model": "super",
+          "thinking": 512,
+          "cost_usd": 0.02,
+          "cached": false,
+          "escalation_reason": null
+        },
+        {
+          "stage": "review",
+          "model": "ultra",
+          "thinking": 1024,
+          "cost_usd": 0.02,
+          "cached": false,
+          "escalation_reason": null
+        }
+      ]
+    },
+    {
+      "id": "dotenv_f2",
+      "title": "find_dotenv('') raises ValueError on empty filename",
+      "status": "rejected",
+      "contract": {
+        "contract_id": "dotenv.find.domain",
+        "version": 1,
+        "hash": "sha256:f6d4b2cede6956dd69e5c12db6fc21ec7c2e0cbd02518eaae04146eba874eeeb",
+        "family": "roundtrip",
+        "claim": "find_dotenv(filename) locates .env file in parent directories.",
+        "status": "explicit",
+        "evidence": [
+          {
+            "source": "README.md",
+            "excerpt": "find_dotenv searches parent directories.",
+            "retrieved": "manual",
+            "content_hash": "sha256:e6640de835ad09fb0a7367ee2e0ba99d0142c139db0272146e35538bd07479fc"
+          }
+        ]
+      },
+      "repro": "from dotenv import find_dotenv\nfind_dotenv('')",
+      "actual": "ValueError",
+      "expected": "''",
+      "traceback": "",
+      "control": "",
+      "replays_passed": 0,
+      "replays_attempted": 0,
+      "checks": [
+        {
+          "question": "Is empty filename valid?",
+          "tool": "inspect_doc_and_source",
+          "result": "{\"doc\": \"filename must be non-empty\"}",
+          "effect": "refutes"
+        }
+      ],
+      "known_behaviour": null,
+      "uncertainty": "",
+      "rejection_reason": "Empty filename is outside documented contract domain for file discovery.",
+      "root_cause": null,
+      "patch_diff": null,
+      "patch_validation": null,
+      "cost_usd": 0.008,
+      "route_trace": [
+        {
+          "stage": "investigate",
+          "model": "super",
+          "thinking": 256,
+          "cost_usd": 0.008,
+          "cached": false,
+          "escalation_reason": null
+        }
+      ]
+    }
+  ],
+  "mode": "core",
+  "retrieval_receipts": [
+    {
+      "url": "https://github.com/theskumar/python-dotenv/blob/v1.0.1/README.md",
+      "retrieved_at": "2026-10-26T12:00:00Z",
+      "content_hash": "sha256:fe0fe056b44036fccd3e2085255419acad9b18bbe597022514ca326dfb3ffb3f",
+      "excerpt": "Key-value pairs can be parsed from and written to env files.",
+      "request_id": "tvly-dotenv-001",
+      "status": "live",
+      "endpoint": "extract",
+      "text": "python-dotenv reads key-value pairs from .env and sets them as environment variables.",
+      "response_hash": "sha256:e3fd81f44d6667cf8ae6f41bb65054d0640b234da8c977c8685a76fa62593f9c",
+      "query": "",
+      "credits": 1.0,
+      "credit_status": "reported",
+      "source_version": "1.0.1",
+      "version_match": true
+    }
+  ],
+  "contracts": [
+    {
+      "contract_id": "dotenv.parse.roundtrip",
+      "version": 1,
+      "hash": "sha256:cc12ba07b285b611000eca8921f98436add095fd552e2d4b5eeb7f11470be203",
+      "family": "roundtrip",
+      "claim": "dotenv_values(stream) round-trips serialize_env(mapping) for valid mappings.",
+      "status": "explicit",
+      "evidence": [
+        {
+          "source": "https://github.com/theskumar/python-dotenv/blob/v1.0.1/README.md",
+          "excerpt": "Key-value pairs can be parsed from and written to env files.",
+          "retrieved": "live 2026-10-26T12:00:00Z",
+          "content_hash": "sha256:27971da4a000accce748e6f7636612c06081b1fe9b3700d7b3d632fb630fdd9f"
+        }
+      ]
+    },
+    {
+      "contract_id": "dotenv.find.domain",
+      "version": 1,
+      "hash": "sha256:f6d4b2cede6956dd69e5c12db6fc21ec7c2e0cbd02518eaae04146eba874eeeb",
+      "family": "roundtrip",
+      "claim": "find_dotenv(filename) locates .env file in parent directories.",
+      "status": "explicit",
+      "evidence": [
+        {
+          "source": "README.md",
+          "excerpt": "find_dotenv searches parent directories.",
+          "retrieved": "manual",
+          "content_hash": "sha256:e6640de835ad09fb0a7367ee2e0ba99d0142c139db0272146e35538bd07479fc"
+        }
+      ]
+    }
+  ],
+  "schema_version": 1,
+  "status_counts": {
+    "human_validated": 1,
+    "rejected": 1
+  },
+  "cost_per_validated_finding": 0.42,
+  "tavily_ledger": {
+    "limit": 1000.0,
+    "used": 4.0,
+    "blocked": false,
+    "reported": 4.0,
+    "estimated": 0.0,
+    "pending": 0.0
+  }
+}

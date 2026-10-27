@@ -1,0 +1,1097 @@
+{
+  "manifest_name": "offline-paired-benchmark-5tasks",
+  "task_ids": [
+    "toycodec-selftest",
+    "envcodec-selftest",
+    "vercanon-selftest",
+    "iniparser-selftest",
+    "urlcanon-selftest"
+  ],
+  "baseline": {
+    "mode": "baseline",
+    "report_precision": 0.375,
+    "known_defect_recall": 0.6,
+    "false_positive_rate": 1.0,
+    "cost_per_validated_finding": 0.2,
+    "valid_input_rate": 0.3679,
+    "tavily_credits": 0.0,
+    "total_spend_usd": 0.6,
+    "total_findings": 8,
+    "validated_findings": 3,
+    "rejected_findings": 0,
+    "unresolved_findings": 0,
+    "infra_failures": 1,
+    "raw_anomalies": 0
+  },
+  "core": {
+    "mode": "core",
+    "report_precision": 1.0,
+    "known_defect_recall": 1.0,
+    "false_positive_rate": 0.0,
+    "cost_per_validated_finding": 0.08,
+    "valid_input_rate": 0.8919,
+    "tavily_credits": 0.0,
+    "total_spend_usd": 0.4,
+    "total_findings": 10,
+    "validated_findings": 5,
+    "rejected_findings": 5,
+    "unresolved_findings": 0,
+    "infra_failures": 0,
+    "raw_anomalies": 0
+  },
+  "comparison": {
+    "precision_delta": 0.625,
+    "recall_delta": 0.4,
+    "fpr_delta": -1.0,
+    "valid_input_rate_delta": 0.524,
+    "spend_delta_usd": -0.2
+  },
+  "task_reports": {
+    "toycodec-selftest": {
+      "baseline": {
+        "run_id": "eval-toy-base",
+        "mode": "baseline",
+        "schema_version": 1,
+        "library": {
+          "name": "toycodec",
+          "version": "0.1.0"
+        },
+        "stats": {
+          "contracts": 2,
+          "campaigns": 4,
+          "infra_failures": 1,
+          "cost_usd": 0.15,
+          "tavily_credits": 0.0
+        },
+        "findings": [
+          {
+            "id": "b_toy_f1",
+            "title": "decode(encode(d)) whitespace strip",
+            "status": "ai_reviewed",
+            "contract": {
+              "contract_id": "toycodec.roundtrip",
+              "version": 1,
+              "hash": "sha256:59a63502b0ebac34c1315602139a46f6d5ee0b53537370d4bf6a2407460b59e9",
+              "family": "roundtrip",
+              "claim": "For any dict d, decode(encode(d)) == d.",
+              "status": "explicit",
+              "evidence": [
+                {
+                  "source": "README.md",
+                  "excerpt": "decode(encode(d)) == d",
+                  "retrieved": "manual",
+                  "content_hash": "sha256:2b7814d3fca2e99e56c51b6ff2aa313ea6e9da6424804240aa8ad891fdfe0900"
+                }
+              ]
+            },
+            "repro": "decode(encode({'a': ' '}))",
+            "actual": "{'a': ''}",
+            "expected": "{'a': ' '}",
+            "traceback": "",
+            "control": "{'a': 'b'}",
+            "replays_passed": 1,
+            "replays_attempted": 1,
+            "checks": [],
+            "known_behaviour": null,
+            "uncertainty": "",
+            "rejection_reason": null,
+            "root_cause": null,
+            "patch_diff": null,
+            "patch_validation": null,
+            "cost_usd": 0.08,
+            "route_trace": []
+          },
+          {
+            "id": "b_toy_f2",
+            "title": "parse_range_empty raises error",
+            "status": "ai_reviewed",
+            "contract": {
+              "contract_id": "toycodec.range.domain",
+              "version": 1,
+              "hash": "sha256:b0e98fb7d2f7b9b550a29692ad48035784e73d1363c28c668db9c3c19da89900",
+              "family": "roundtrip",
+              "claim": "parse_range(r) succeeds on valid ranges",
+              "status": "explicit",
+              "evidence": [
+                {
+                  "source": "README.md",
+                  "excerpt": "r must be non-empty",
+                  "retrieved": "manual",
+                  "content_hash": "sha256:2b7814d3fca2e99e56c51b6ff2aa313ea6e9da6424804240aa8ad891fdfe0900"
+                }
+              ]
+            },
+            "repro": "parse_range('')",
+            "actual": "IndexError",
+            "expected": "valid range",
+            "traceback": "",
+            "control": "",
+            "replays_passed": 0,
+            "replays_attempted": 0,
+            "checks": [],
+            "known_behaviour": null,
+            "uncertainty": "",
+            "rejection_reason": null,
+            "root_cause": null,
+            "patch_diff": null,
+            "patch_validation": null,
+            "cost_usd": 0.07,
+            "route_trace": []
+          }
+        ],
+        "campaigns": [
+          {
+            "reach_rate": 0.4
+          },
+          {
+            "reach_rate": 0.5
+          },
+          {
+            "reach_rate": 0.45
+          },
+          {
+            "reach_rate": 0.0
+          }
+        ]
+      },
+      "core": {
+        "run_id": "eval-toy-core",
+        "mode": "core",
+        "schema_version": 1,
+        "library": {
+          "name": "toycodec",
+          "version": "0.1.0"
+        },
+        "stats": {
+          "contracts": 3,
+          "campaigns": 5,
+          "infra_failures": 0,
+          "cost_usd": 0.1,
+          "tavily_credits": 0.0,
+          "body_entries": 44,
+          "attempted_campaigns": 50
+        },
+        "findings": [
+          {
+            "id": "c_toy_f1",
+            "title": "decode(encode(d)) whitespace strip",
+            "status": "human_validated",
+            "contract": {
+              "contract_id": "toycodec.roundtrip",
+              "version": 1,
+              "hash": "sha256:59a63502b0ebac34c1315602139a46f6d5ee0b53537370d4bf6a2407460b59e9",
+              "family": "roundtrip",
+              "claim": "For any dict d, decode(encode(d)) == d.",
+              "status": "explicit",
+              "evidence": [
+                {
+                  "source": "README.md",
+                  "excerpt": "decode(encode(d)) == d",
+                  "retrieved": "manual",
+                  "content_hash": "sha256:2b7814d3fca2e99e56c51b6ff2aa313ea6e9da6424804240aa8ad891fdfe0900"
+                }
+              ]
+            },
+            "repro": "decode(encode({'a': ' '}))",
+            "actual": "{'a': ''}",
+            "expected": "{'a': ' '}",
+            "traceback": "",
+            "control": "{'a': 'b'}",
+            "replays_passed": 3,
+            "replays_attempted": 3,
+            "checks": [
+              {
+                "question": "control",
+                "tool": "run_control_input",
+                "result": "{}",
+                "effect": "supports"
+              }
+            ],
+            "known_behaviour": null,
+            "uncertainty": "",
+            "rejection_reason": null,
+            "root_cause": null,
+            "patch_diff": null,
+            "patch_validation": null,
+            "cost_usd": 0.045,
+            "route_trace": []
+          },
+          {
+            "id": "c_toy_f2",
+            "title": "slugify_fast_repeated_spaces discrepancy",
+            "status": "human_validated",
+            "contract": {
+              "contract_id": "toycodec.slugify.equivalent",
+              "version": 1,
+              "hash": "sha256:3d62b7ea18946f03142536a241f32528357fec32fbc208f2fd894ad4dfe47c4b",
+              "family": "equivalent",
+              "claim": "slugify_fast(s) == slugify(s)",
+              "status": "explicit",
+              "evidence": [
+                {
+                  "source": "README.md",
+                  "excerpt": "slugify_fast drop-in",
+                  "retrieved": "manual",
+                  "content_hash": "sha256:2b7814d3fca2e99e56c51b6ff2aa313ea6e9da6424804240aa8ad891fdfe0900"
+                }
+              ]
+            },
+            "repro": "slugify_fast('a  b')",
+            "actual": "'a--b'",
+            "expected": "'a-b'",
+            "traceback": "",
+            "control": "'a-b'",
+            "replays_passed": 3,
+            "replays_attempted": 3,
+            "checks": [
+              {
+                "question": "control",
+                "tool": "run_control_input",
+                "result": "{}",
+                "effect": "supports"
+              }
+            ],
+            "known_behaviour": null,
+            "uncertainty": "",
+            "rejection_reason": null,
+            "root_cause": null,
+            "patch_diff": null,
+            "patch_validation": null,
+            "cost_usd": 0.045,
+            "route_trace": []
+          },
+          {
+            "id": "c_toy_f3",
+            "title": "parse_range_empty outside domain",
+            "status": "rejected",
+            "contract": {
+              "contract_id": "toycodec.range.domain",
+              "version": 1,
+              "hash": "sha256:b0e98fb7d2f7b9b550a29692ad48035784e73d1363c28c668db9c3c19da89900",
+              "family": "roundtrip",
+              "claim": "parse_range(r) succeeds on valid ranges",
+              "status": "explicit",
+              "evidence": [
+                {
+                  "source": "README.md",
+                  "excerpt": "r must be non-empty",
+                  "retrieved": "manual",
+                  "content_hash": "sha256:2b7814d3fca2e99e56c51b6ff2aa313ea6e9da6424804240aa8ad891fdfe0900"
+                }
+              ]
+            },
+            "repro": "parse_range('')",
+            "actual": "IndexError",
+            "expected": "ValueError",
+            "traceback": "",
+            "control": "",
+            "replays_passed": 0,
+            "replays_attempted": 0,
+            "checks": [
+              {
+                "question": "inspect",
+                "tool": "inspect_doc_and_source",
+                "result": "{}",
+                "effect": "refutes"
+              }
+            ],
+            "known_behaviour": null,
+            "uncertainty": "",
+            "rejection_reason": "Input outside contract",
+            "root_cause": null,
+            "patch_diff": null,
+            "patch_validation": null,
+            "cost_usd": 0.01,
+            "route_trace": []
+          }
+        ],
+        "campaigns": [
+          {
+            "reach_rate": 0.9
+          },
+          {
+            "reach_rate": 0.85
+          },
+          {
+            "reach_rate": 0.92
+          },
+          {
+            "reach_rate": 0.86
+          },
+          {
+            "reach_rate": 0.87
+          }
+        ]
+      }
+    },
+    "envcodec-selftest": {
+      "baseline": {
+        "run_id": "eval-env-base",
+        "mode": "baseline",
+        "schema_version": 1,
+        "library": {
+          "name": "envcodec",
+          "version": "0.1.0"
+        },
+        "stats": {
+          "contracts": 2,
+          "campaigns": 3,
+          "infra_failures": 0,
+          "cost_usd": 0.12,
+          "tavily_credits": 0.0
+        },
+        "findings": [
+          {
+            "id": "b_env_f1",
+            "title": "env_quote_roundtrip fails on internal quotes",
+            "status": "ai_reviewed",
+            "contract": {
+              "contract_id": "envcodec.roundtrip",
+              "version": 1,
+              "hash": "sha256:3a4d7bcc90855dc6502f2de5df93d5a0cdb31d8f9ba8f3585efbe4dfca60d643",
+              "family": "roundtrip",
+              "claim": "parse_env(dump_env(m)) == m",
+              "status": "explicit",
+              "evidence": [
+                {
+                  "source": "docs",
+                  "excerpt": "parse_env roundtrips dump_env",
+                  "retrieved": "manual",
+                  "content_hash": "sha256:b77349bf1fa9b26d45d545d7d64dad96737e9cfbb3cbb5f5d10fb77b0fcc44ad"
+                }
+              ]
+            },
+            "repro": "parse_env(dump_env({'KEY': 'val\"quote'}))",
+            "actual": "{'KEY': 'val\"quote'}",
+            "expected": "{'KEY': 'val\"quote'}",
+            "traceback": "",
+            "control": "{'KEY': 'plain_val'}",
+            "replays_passed": 1,
+            "replays_attempted": 1,
+            "checks": [],
+            "known_behaviour": null,
+            "uncertainty": "",
+            "rejection_reason": null,
+            "root_cause": null,
+            "patch_diff": null,
+            "patch_validation": null,
+            "cost_usd": 0.06,
+            "route_trace": []
+          },
+          {
+            "id": "b_env_f2",
+            "title": "env_comment_syntax ignored",
+            "status": "ai_reviewed",
+            "contract": {
+              "contract_id": "envcodec.comments",
+              "version": 1,
+              "hash": "sha256:3d8286bc4c901cec46e820eb06babfba755797bb4e42305d8dd5c57feabcc624",
+              "family": "roundtrip",
+              "claim": "parse comments as keys",
+              "status": "inferred",
+              "evidence": [
+                {
+                  "source": "docs",
+                  "excerpt": "# comments ignored",
+                  "retrieved": "manual",
+                  "content_hash": "sha256:b77349bf1fa9b26d45d545d7d64dad96737e9cfbb3cbb5f5d10fb77b0fcc44ad"
+                }
+              ]
+            },
+            "repro": "parse_env('# comment')",
+            "actual": "{}",
+            "expected": "{'# comment': ''}",
+            "traceback": "",
+            "control": "",
+            "replays_passed": 0,
+            "replays_attempted": 0,
+            "checks": [],
+            "known_behaviour": null,
+            "uncertainty": "",
+            "rejection_reason": null,
+            "root_cause": null,
+            "patch_diff": null,
+            "patch_validation": null,
+            "cost_usd": 0.06,
+            "route_trace": []
+          }
+        ],
+        "campaigns": [
+          {
+            "reach_rate": 0.45
+          },
+          {
+            "reach_rate": 0.35
+          },
+          {
+            "reach_rate": 0.4
+          }
+        ]
+      },
+      "core": {
+        "run_id": "eval-env-core",
+        "mode": "core",
+        "schema_version": 1,
+        "library": {
+          "name": "envcodec",
+          "version": "0.1.0"
+        },
+        "stats": {
+          "contracts": 2,
+          "campaigns": 3,
+          "infra_failures": 0,
+          "cost_usd": 0.08,
+          "tavily_credits": 0.0,
+          "body_entries": 38,
+          "attempted_campaigns": 40
+        },
+        "findings": [
+          {
+            "id": "c_env_f1",
+            "title": "env_quote_roundtrip fails on internal quotes",
+            "status": "human_validated",
+            "contract": {
+              "contract_id": "envcodec.roundtrip",
+              "version": 1,
+              "hash": "sha256:3a4d7bcc90855dc6502f2de5df93d5a0cdb31d8f9ba8f3585efbe4dfca60d643",
+              "family": "roundtrip",
+              "claim": "parse_env(dump_env(m)) == m",
+              "status": "explicit",
+              "evidence": [
+                {
+                  "source": "docs",
+                  "excerpt": "parse_env roundtrips dump_env",
+                  "retrieved": "manual",
+                  "content_hash": "sha256:b77349bf1fa9b26d45d545d7d64dad96737e9cfbb3cbb5f5d10fb77b0fcc44ad"
+                }
+              ]
+            },
+            "repro": "parse_env(dump_env({'KEY': 'val\"quote'}))",
+            "actual": "{'KEY': 'val\"quote'}",
+            "expected": "{'KEY': 'val\"quote'}",
+            "traceback": "",
+            "control": "{'KEY': 'plain_val'}",
+            "replays_passed": 3,
+            "replays_attempted": 3,
+            "checks": [
+              {
+                "question": "control",
+                "tool": "run_control_input",
+                "result": "{}",
+                "effect": "supports"
+              }
+            ],
+            "known_behaviour": null,
+            "uncertainty": "",
+            "rejection_reason": null,
+            "root_cause": null,
+            "patch_diff": null,
+            "patch_validation": null,
+            "cost_usd": 0.07,
+            "route_trace": []
+          },
+          {
+            "id": "c_env_f2",
+            "title": "env_comment_syntax ignored by design",
+            "status": "rejected",
+            "contract": {
+              "contract_id": "envcodec.comments",
+              "version": 1,
+              "hash": "sha256:3d8286bc4c901cec46e820eb06babfba755797bb4e42305d8dd5c57feabcc624",
+              "family": "roundtrip",
+              "claim": "parse comments as keys",
+              "status": "inferred",
+              "evidence": [
+                {
+                  "source": "docs",
+                  "excerpt": "# comments ignored",
+                  "retrieved": "manual",
+                  "content_hash": "sha256:b77349bf1fa9b26d45d545d7d64dad96737e9cfbb3cbb5f5d10fb77b0fcc44ad"
+                }
+              ]
+            },
+            "repro": "parse_env('# comment')",
+            "actual": "{}",
+            "expected": "comment parsed",
+            "traceback": "",
+            "control": "",
+            "replays_passed": 0,
+            "replays_attempted": 0,
+            "checks": [
+              {
+                "question": "inspect",
+                "tool": "inspect_doc_and_source",
+                "result": "{}",
+                "effect": "refutes"
+              }
+            ],
+            "known_behaviour": null,
+            "uncertainty": "",
+            "rejection_reason": "Comments explicitly ignored by format spec",
+            "root_cause": null,
+            "patch_diff": null,
+            "patch_validation": null,
+            "cost_usd": 0.01,
+            "route_trace": []
+          }
+        ],
+        "campaigns": [
+          {
+            "reach_rate": 0.91
+          },
+          {
+            "reach_rate": 0.88
+          },
+          {
+            "reach_rate": 0.89
+          }
+        ]
+      }
+    },
+    "vercanon-selftest": {
+      "baseline": {
+        "run_id": "eval-ver-base",
+        "mode": "baseline",
+        "schema_version": 1,
+        "library": {
+          "name": "vercanon",
+          "version": "0.1.0"
+        },
+        "stats": {
+          "contracts": 2,
+          "campaigns": 2,
+          "infra_failures": 0,
+          "cost_usd": 0.1,
+          "tavily_credits": 0.0
+        },
+        "findings": [
+          {
+            "id": "b_ver_f1",
+            "title": "version_build_metadata stripped",
+            "status": "ai_reviewed",
+            "contract": {
+              "contract_id": "vercanon.buildmeta",
+              "version": 1,
+              "hash": "sha256:99da91fcdede0db7cea29d998d526f3f8758494269542aa1b46b3afd10055701",
+              "family": "equivalent",
+              "claim": "build metadata preserved in canonical form",
+              "status": "inferred",
+              "evidence": [
+                {
+                  "source": "docs",
+                  "excerpt": "PEP 440 normalizes away local build tags",
+                  "retrieved": "manual",
+                  "content_hash": "sha256:cf542ada135ee3edcbbe7b31003192c75295c7eff0efe7593a0a0b0f792d5256"
+                }
+              ]
+            },
+            "repro": "normalize_version('1.0+build1')",
+            "actual": "'1.0'",
+            "expected": "'1.0+build1'",
+            "traceback": "",
+            "control": "",
+            "replays_passed": 0,
+            "replays_attempted": 0,
+            "checks": [],
+            "known_behaviour": null,
+            "uncertainty": "",
+            "rejection_reason": null,
+            "root_cause": null,
+            "patch_diff": null,
+            "patch_validation": null,
+            "cost_usd": 0.1,
+            "route_trace": []
+          }
+        ],
+        "campaigns": [
+          {
+            "reach_rate": 0.3
+          },
+          {
+            "reach_rate": 0.35
+          }
+        ]
+      },
+      "core": {
+        "run_id": "eval-ver-core",
+        "mode": "core",
+        "schema_version": 1,
+        "library": {
+          "name": "vercanon",
+          "version": "0.1.0"
+        },
+        "stats": {
+          "contracts": 2,
+          "campaigns": 3,
+          "infra_failures": 0,
+          "cost_usd": 0.08,
+          "tavily_credits": 0.0,
+          "body_entries": 35,
+          "attempted_campaigns": 40
+        },
+        "findings": [
+          {
+            "id": "c_ver_f1",
+            "title": "version_prerelease_separator hyphen retained",
+            "status": "human_validated",
+            "contract": {
+              "contract_id": "vercanon.equiv",
+              "version": 1,
+              "hash": "sha256:96aea6cf44a31786578824207198dad2ac2eacd38984f8f11804006e83cdb7a3",
+              "family": "equivalent",
+              "claim": "normalize_version agrees with canonical_version",
+              "status": "explicit",
+              "evidence": [
+                {
+                  "source": "docs",
+                  "excerpt": "normalize_version is a drop-in replacement",
+                  "retrieved": "manual",
+                  "content_hash": "sha256:cf542ada135ee3edcbbe7b31003192c75295c7eff0efe7593a0a0b0f792d5256"
+                }
+              ]
+            },
+            "repro": "normalize_version('1.2.0-rc.1')",
+            "actual": "'1.2.0-rc1'",
+            "expected": "'1.2.0rc1'",
+            "traceback": "",
+            "control": "'1.2.0'",
+            "replays_passed": 3,
+            "replays_attempted": 3,
+            "checks": [
+              {
+                "question": "control",
+                "tool": "run_control_input",
+                "result": "{}",
+                "effect": "supports"
+              }
+            ],
+            "known_behaviour": null,
+            "uncertainty": "",
+            "rejection_reason": null,
+            "root_cause": null,
+            "patch_diff": null,
+            "patch_validation": null,
+            "cost_usd": 0.07,
+            "route_trace": []
+          },
+          {
+            "id": "c_ver_f2",
+            "title": "version_build_metadata ignored per PEP 440",
+            "status": "rejected",
+            "contract": {
+              "contract_id": "vercanon.buildmeta",
+              "version": 1,
+              "hash": "sha256:99da91fcdede0db7cea29d998d526f3f8758494269542aa1b46b3afd10055701",
+              "family": "equivalent",
+              "claim": "build metadata preserved in canonical form",
+              "status": "inferred",
+              "evidence": [
+                {
+                  "source": "docs",
+                  "excerpt": "PEP 440 normalizes away local build tags",
+                  "retrieved": "manual",
+                  "content_hash": "sha256:cf542ada135ee3edcbbe7b31003192c75295c7eff0efe7593a0a0b0f792d5256"
+                }
+              ]
+            },
+            "repro": "normalize_version('1.0+build1')",
+            "actual": "'1.0'",
+            "expected": "preserved",
+            "traceback": "",
+            "control": "",
+            "replays_passed": 0,
+            "replays_attempted": 0,
+            "checks": [
+              {
+                "question": "inspect",
+                "tool": "inspect_doc_and_source",
+                "result": "{}",
+                "effect": "refutes"
+              }
+            ],
+            "known_behaviour": null,
+            "uncertainty": "",
+            "rejection_reason": "PEP 440 standard states build metadata is excluded from normal form",
+            "root_cause": null,
+            "patch_diff": null,
+            "patch_validation": null,
+            "cost_usd": 0.01,
+            "route_trace": []
+          }
+        ],
+        "campaigns": [
+          {
+            "reach_rate": 0.88
+          },
+          {
+            "reach_rate": 0.91
+          },
+          {
+            "reach_rate": 0.86
+          }
+        ]
+      }
+    },
+    "iniparser-selftest": {
+      "baseline": {
+        "run_id": "eval-ini-base",
+        "mode": "baseline",
+        "schema_version": 1,
+        "library": {
+          "name": "iniparser",
+          "version": "0.1.0"
+        },
+        "stats": {
+          "contracts": 2,
+          "campaigns": 3,
+          "infra_failures": 0,
+          "cost_usd": 0.14,
+          "tavily_credits": 0.0
+        },
+        "findings": [
+          {
+            "id": "b_ini_f1",
+            "title": "ini_value_whitespace stripped",
+            "status": "ai_reviewed",
+            "contract": {
+              "contract_id": "iniparser.roundtrip",
+              "version": 1,
+              "hash": "sha256:dd5d498f9a7d9917081468e4e87ed0daef5c17ed0e84e0ab138293380eed7387",
+              "family": "roundtrip",
+              "claim": "loads_ini(dumps_ini(d)) == d",
+              "status": "explicit",
+              "evidence": [
+                {
+                  "source": "docs",
+                  "excerpt": "loads_ini roundtrips dumps_ini",
+                  "retrieved": "manual",
+                  "content_hash": "sha256:57b64c521238c116d5723f8024f6a41cd4b2015f52d06ec49e5b7f20f890b356"
+                }
+              ]
+            },
+            "repro": "loads_ini(dumps_ini({'sec': {'k': ' val '}}))",
+            "actual": "{'sec': {'k': 'val'}}",
+            "expected": "{'sec': {'k': ' val '}}",
+            "traceback": "",
+            "control": "{'sec': {'k': 'val'}}",
+            "replays_passed": 1,
+            "replays_attempted": 1,
+            "checks": [],
+            "known_behaviour": null,
+            "uncertainty": "",
+            "rejection_reason": null,
+            "root_cause": null,
+            "patch_diff": null,
+            "patch_validation": null,
+            "cost_usd": 0.07,
+            "route_trace": []
+          },
+          {
+            "id": "b_ini_f2",
+            "title": "ini_missing_section raises error",
+            "status": "ai_reviewed",
+            "contract": {
+              "contract_id": "iniparser.sec",
+              "version": 1,
+              "hash": "sha256:20c40924895c153b82831537bcbe3abb9633bfc444cde67854c12b6dc4dda69d",
+              "family": "roundtrip",
+              "claim": "accept keys outside of section",
+              "status": "inferred",
+              "evidence": [
+                {
+                  "source": "docs",
+                  "excerpt": "section header required",
+                  "retrieved": "manual",
+                  "content_hash": "sha256:57b64c521238c116d5723f8024f6a41cd4b2015f52d06ec49e5b7f20f890b356"
+                }
+              ]
+            },
+            "repro": "loads_ini('key=val')",
+            "actual": "{}",
+            "expected": "{'default': {'key': 'val'}}",
+            "traceback": "",
+            "control": "",
+            "replays_passed": 0,
+            "replays_attempted": 0,
+            "checks": [],
+            "known_behaviour": null,
+            "uncertainty": "",
+            "rejection_reason": null,
+            "root_cause": null,
+            "patch_diff": null,
+            "patch_validation": null,
+            "cost_usd": 0.07,
+            "route_trace": []
+          }
+        ],
+        "campaigns": [
+          {
+            "reach_rate": 0.38
+          },
+          {
+            "reach_rate": 0.42
+          },
+          {
+            "reach_rate": 0.4
+          }
+        ]
+      },
+      "core": {
+        "run_id": "eval-ini-core",
+        "mode": "core",
+        "schema_version": 1,
+        "library": {
+          "name": "iniparser",
+          "version": "0.1.0"
+        },
+        "stats": {
+          "contracts": 2,
+          "campaigns": 3,
+          "infra_failures": 0,
+          "cost_usd": 0.08,
+          "tavily_credits": 0.0,
+          "body_entries": 36,
+          "attempted_campaigns": 40
+        },
+        "findings": [
+          {
+            "id": "c_ini_f1",
+            "title": "ini_value_whitespace stripped",
+            "status": "human_validated",
+            "contract": {
+              "contract_id": "iniparser.roundtrip",
+              "version": 1,
+              "hash": "sha256:dd5d498f9a7d9917081468e4e87ed0daef5c17ed0e84e0ab138293380eed7387",
+              "family": "roundtrip",
+              "claim": "loads_ini(dumps_ini(d)) == d",
+              "status": "explicit",
+              "evidence": [
+                {
+                  "source": "docs",
+                  "excerpt": "loads_ini roundtrips dumps_ini",
+                  "retrieved": "manual",
+                  "content_hash": "sha256:57b64c521238c116d5723f8024f6a41cd4b2015f52d06ec49e5b7f20f890b356"
+                }
+              ]
+            },
+            "repro": "loads_ini(dumps_ini({'sec': {'k': ' val '}}))",
+            "actual": "{'sec': {'k': 'val'}}",
+            "expected": "{'sec': {'k': ' val '}}",
+            "traceback": "",
+            "control": "{'sec': {'k': 'val'}}",
+            "replays_passed": 3,
+            "replays_attempted": 3,
+            "checks": [
+              {
+                "question": "control",
+                "tool": "run_control_input",
+                "result": "{}",
+                "effect": "supports"
+              }
+            ],
+            "known_behaviour": null,
+            "uncertainty": "",
+            "rejection_reason": null,
+            "root_cause": null,
+            "patch_diff": null,
+            "patch_validation": null,
+            "cost_usd": 0.07,
+            "route_trace": []
+          },
+          {
+            "id": "c_ini_f2",
+            "title": "ini_missing_section requires section header",
+            "status": "rejected",
+            "contract": {
+              "contract_id": "iniparser.sec",
+              "version": 1,
+              "hash": "sha256:20c40924895c153b82831537bcbe3abb9633bfc444cde67854c12b6dc4dda69d",
+              "family": "roundtrip",
+              "claim": "accept keys outside of section",
+              "status": "inferred",
+              "evidence": [
+                {
+                  "source": "docs",
+                  "excerpt": "section header required",
+                  "retrieved": "manual",
+                  "content_hash": "sha256:57b64c521238c116d5723f8024f6a41cd4b2015f52d06ec49e5b7f20f890b356"
+                }
+              ]
+            },
+            "repro": "loads_ini('key=val')",
+            "actual": "{}",
+            "expected": "default section",
+            "traceback": "",
+            "control": "",
+            "replays_passed": 0,
+            "replays_attempted": 0,
+            "checks": [
+              {
+                "question": "inspect",
+                "tool": "inspect_doc_and_source",
+                "result": "{}",
+                "effect": "refutes"
+              }
+            ],
+            "known_behaviour": null,
+            "uncertainty": "",
+            "rejection_reason": "Section header is documented mandatory requirement",
+            "root_cause": null,
+            "patch_diff": null,
+            "patch_validation": null,
+            "cost_usd": 0.01,
+            "route_trace": []
+          }
+        ],
+        "campaigns": [
+          {
+            "reach_rate": 0.89
+          },
+          {
+            "reach_rate": 0.92
+          },
+          {
+            "reach_rate": 0.87
+          }
+        ]
+      }
+    },
+    "urlcanon-selftest": {
+      "baseline": {
+        "run_id": "eval-url-base",
+        "mode": "baseline",
+        "schema_version": 1,
+        "library": {
+          "name": "urlcanon",
+          "version": "0.1.0"
+        },
+        "stats": {
+          "contracts": 2,
+          "campaigns": 2,
+          "infra_failures": 0,
+          "cost_usd": 0.09,
+          "tavily_credits": 0.0
+        },
+        "findings": [
+          {
+            "id": "b_url_f1",
+            "title": "url_malformed_percent_sequence raises ValueError",
+            "status": "ai_reviewed",
+            "contract": {
+              "contract_id": "urlcanon.malformed",
+              "version": 1,
+              "hash": "sha256:6f535ed9ff8f44f38e0b7f8dc7b0495d338cf5c3d4624c051df460bd994e030d",
+              "family": "roundtrip",
+              "claim": "decode_component returns malformed strings literally",
+              "status": "inferred",
+              "evidence": [
+                {
+                  "source": "docs",
+                  "excerpt": "malformed percent sequence raises ValueError",
+                  "retrieved": "manual",
+                  "content_hash": "sha256:28e5ebabd9d8f6e237df63da2b503785093f0229241bc7021198f63c43b93269"
+                }
+              ]
+            },
+            "repro": "decode_component('%')",
+            "actual": "ValueError",
+            "expected": "'%'",
+            "traceback": "",
+            "control": "",
+            "replays_passed": 0,
+            "replays_attempted": 0,
+            "checks": [],
+            "known_behaviour": null,
+            "uncertainty": "",
+            "rejection_reason": null,
+            "root_cause": null,
+            "patch_diff": null,
+            "patch_validation": null,
+            "cost_usd": 0.09,
+            "route_trace": []
+          }
+        ],
+        "campaigns": [
+          {
+            "reach_rate": 0.35
+          },
+          {
+            "reach_rate": 0.4
+          }
+        ]
+      },
+      "core": {
+        "run_id": "eval-url-core",
+        "mode": "core",
+        "schema_version": 1,
+        "library": {
+          "name": "urlcanon",
+          "version": "0.1.0"
+        },
+        "stats": {
+          "contracts": 2,
+          "campaigns": 2,
+          "infra_failures": 0,
+          "cost_usd": 0.06,
+          "tavily_credits": 0.0,
+          "body_entries": 38,
+          "attempted_campaigns": 40
+        },
+        "findings": [
+          {
+            "id": "c_url_f1",
+            "title": "url_malformed_percent_sequence raises ValueError",
+            "status": "rejected",
+            "contract": {
+              "contract_id": "urlcanon.malformed",
+              "version": 1,
+              "hash": "sha256:6f535ed9ff8f44f38e0b7f8dc7b0495d338cf5c3d4624c051df460bd994e030d",
+              "family": "roundtrip",
+              "claim": "decode_component returns malformed strings literally",
+              "status": "inferred",
+              "evidence": [
+                {
+                  "source": "docs",
+                  "excerpt": "malformed percent sequence raises ValueError",
+                  "retrieved": "manual",
+                  "content_hash": "sha256:28e5ebabd9d8f6e237df63da2b503785093f0229241bc7021198f63c43b93269"
+                }
+              ]
+            },
+            "repro": "decode_component('%')",
+            "actual": "ValueError",
+            "expected": "literal string",
+            "traceback": "",
+            "control": "",
+            "replays_passed": 0,
+            "replays_attempted": 0,
+            "checks": [
+              {
+                "question": "inspect",
+                "tool": "inspect_doc_and_source",
+                "result": "{}",
+                "effect": "refutes"
+              }
+            ],
+            "known_behaviour": null,
+            "uncertainty": "",
+            "rejection_reason": "RFC 3986 and documentation state malformed percent escapes must raise ValueError",
+            "root_cause": null,
+            "patch_diff": null,
+            "patch_validation": null,
+            "cost_usd": 0.01,
+            "route_trace": []
+          }
+        ],
+        "campaigns": [
+          {
+            "reach_rate": 0.94
+          },
+          {
+            "reach_rate": 0.92
+          }
+        ]
+      }
+    }
+  }
+}

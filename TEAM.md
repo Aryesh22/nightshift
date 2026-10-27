@@ -41,7 +41,7 @@ The plan itself is unchanged: **find bugs that break what the docs promise, try 
 - [ ] ❓ **Jatin:** Sandbox beta access requested? Tavily key obtained?
 - [ ] **Jatin:** run `DockerSandbox` for real once (`base64` contract: prepare → fork → put_file → run → close) and paste the output in the PR thread
 - [ ] ❓ **Ruchir:** Next.js skeleton against `samples/report.json`? Finding card with the 5 questions?
-- [ ] ❓ **Ruchir + Aryesh:** 2 PBT-Bench tasks preflighted through PBT-Bench's own evaluator; selection rules for the 10 tasks written down
+- [ ] ❓ **Ruchir:** 2 PBT-Bench tasks preflighted through PBT-Bench's own evaluator; selection rules for the 10 tasks written down
 - [ ] **Ruchir:** the 10 tasks picked (4 L1, 4 L2, 2 L3), answers hidden from the agent, `benchmark/tasks.json` committed
 
 ## The last three days
@@ -54,7 +54,8 @@ The plan itself is unchanged: **find bugs that break what the docs promise, try 
 - [ ] **Ruchir:** everything under "Ruchir's work" below, in that order.
 
 ### Oct 28: evidence
-- [ ] **Ruchir + Aryesh:** run the **paired comparison** on the 10 tasks (20 campaigns, cap $10). Record every cost, failure and denominator. If credits are short, run 5 tasks and say so.
+- [ ] **Aryesh:** run the **paired comparison** on the 10 tasks from Ruchir's manifest (20 campaigns, cap $10) and commit the `runs/` output. Record every cost, failure and denominator. If credits are short, run 5 tasks and say so.
+- [ ] **Ruchir:** score those runs with PBT-Bench's evaluator and put the table in `benchmark/RESULTS.md`, with denominators.
 - [ ] **ALL:** a human reproduces every `ai_reviewed` survivor from the real campaigns. Set `human_validated` by hand in the run's `report.json` only after you ran the repro yourself. File genuine ones upstream (polite, mention AI assistance, link the evidence bundle).
 - [ ] **Jatin:** known-issue search on every survivor; product feedback write-up (Token Factory, Sandboxes, Nemotron, Tavily) as `docs/product-feedback.md`.
 - [ ] **Aryesh:** capped Ultra review on 1–2 validated survivors (skip if none). Optional patch only with validation.
@@ -67,7 +68,7 @@ The plan itself is unchanged: **find bugs that break what the docs promise, try 
 - [ ] **ALL:** final checklist: repo **public**, license visible, demo live until Dec 15, video public, submit
 
 ## Ruchir's work (Oct 27–29, in priority order)
-Everything you need is on `main` plus `samples/report.json`. Ask Aryesh if a field is unclear; do not guess.
+All five items are yours alone; none waits on Aryesh or Jatin. Everything you need is on `main` plus `samples/report.json`. If a field is unclear, post the question in the group chat and keep going with the next item.
 
 1. **Dashboard against the current `samples/report.json`** (Next.js, Vercel free tier). Pages:
    - **Run overview:** library name + version/commit, `status_counts`, total cost, `cost_per_validated_finding` (show "n/a" when null; never divide by zero in the UI), Tavily credits used.
@@ -75,12 +76,12 @@ Everything you need is on `main` plus `samples/report.json`. Ask Aryesh if a fie
    - **Rejected and unresolved view:** same cards, filtered. The judges must see what we threw away.
    - **Cost view:** `cost_by_model` and per-finding cost; a small table, no fancy chart needed.
    - **Replay mode:** load any `report.json` by file upload or `?report=<url>`; this is how the demo stays live after credits run out.
-2. **PBT-Bench task selection, before any campaign runs** (half a day, with Aryesh for the first two):
+2. **PBT-Bench task selection, before any campaign runs** (half a day, solo):
    - Write `benchmark/SELECTION.md`: the rules (4 L1, 4 L2, 2 L3; pure Python; installs offline inside Docker; docs in the repo) and why.
-   - Preflight 2 tasks through PBT-Bench's **own** evaluator so we know its output format.
+   - Run 2 tasks through PBT-Bench's **own** evaluator yourself (no Nightshift, no API key needed) and paste its output format into `SELECTION.md`.
    - Commit `benchmark/tasks.json` in the manifest format above. `known_defects` and `hard_negatives` stay out of anything the agent reads.
 3. **Deploy** (Oct 28): Vercel, replay mode on by default, "try live" button capped at $0.25 and off when credits are gone.
-4. **Video + Devpost + diagram** (Oct 29): one real finding card walked end to end, the benchmark table as measured, the cost. Script it on Oct 28 evening so recording is quick.
+4. **Video + Devpost + diagram** (Oct 29): one real finding card walked end to end, the benchmark table from `benchmark/RESULTS.md`, the cost. Script it on Oct 28 evening so recording is quick. The only input you need from others is the `runs/` folder, which Aryesh commits on Oct 28.
 5. **Submission checklist owner:** you own the Oct 29 checklist and ping everyone until each box is ticked.
 
 What **not** to spend time on: a learned router view, patch diffs (optional and last), animations, a landing page.

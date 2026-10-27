@@ -15,9 +15,9 @@ The plan itself is unchanged: **find bugs that break what the docs promise, try 
 
 | Person | Role | Owns |
 |---|---|---|
-| **Aryesh** ([@Aryesh22](https://github.com/Aryesh22)) | 🧠 Contracts & AI pipeline | Contract format, adapters, test wrapper, prompts, Lightning generation, Super investigator, Ultra review, escalation rules, `main` and reviews |
+| **Aryesh** ([@Aryesh22](https://github.com/Aryesh22)) | 🧠 Pipeline backend | Contract format, adapters, test wrapper, prompts, Lightning generation, Super investigator, Ultra review, escalation rules, running the real campaigns, `main` and reviews |
 | **Jatin** ([@jatin-encrypted](https://github.com/jatin-encrypted)) | ⚙️ Runtime & evidence | Sandbox (Docker → Nebius VM), fresh-process replay, investigator tools, Tavily docs + known-issue search with receipts, real-package campaigns, product feedback write-up |
-| **Ruchir** ([@Ruchir038](https://github.com/Ruchir038)) | 🎨 Product & evaluation | Next.js dashboard, evidence views, PBT-Bench task selection and manifest, deploy, video, Devpost write-up |
+| **Ruchir** ([@Ruchir038](https://github.com/Ruchir038)) | 🎨 Access, evaluation & product | **Nebius/Tavily keys and model checks**, human-validation CLI, benchmark manifest + scoring script, Next.js dashboard, deploy, video, Devpost write-up |
 
 ## Contracts between us (unchanged, two additions)
 - **Aryesh ↔ Jatin:** `src/nightshift/sandbox/base.py` (`prepare`, `fork`, `put_file`, `run` → `RunResult`, `close`). `DockerSandbox` must pass the same behaviour as `UnsafeLocalSandbox` does in the tests.
@@ -37,7 +37,7 @@ The plan itself is unchanged: **find bugs that break what the docs promise, try 
 - [x] **Jatin + Aryesh:** Lightning writes contracts from docs only and harnesses from contract + source; Super approves adapters without bodies and investigates with a refutation loop that may answer `unresolved`; baseline arm kept for the comparison
 
 ### Not done, or unverified
-- [ ] ❓ **Aryesh:** Nebius API key, then `uv run python scripts/check_models.py --ping`. Confirm the three model IDs and which reasoning controls work. **Nothing else matters until this works.**
+- [ ] **Ruchir (moved from Aryesh):** Nebius API key, then `uv run python scripts/check_models.py`. Confirm the three model IDs and which reasoning controls work. **Nothing else matters until this works.**
 - [ ] ❓ **Jatin:** Sandbox beta access requested? Tavily key obtained?
 - [ ] **Jatin:** run `DockerSandbox` for real once (`base64` contract: prepare → fork → put_file → run → close) and paste the output in the PR thread
 - [ ] ❓ **Ruchir:** Next.js skeleton against `samples/report.json`? Finding card with the 5 questions?
@@ -47,7 +47,8 @@ The plan itself is unchanged: **find bugs that break what the docs promise, try 
 ## The last three days
 
 ### Oct 27 (today): make it real
-- [ ] **Aryesh:** merge `aryesh/core-from-pr1`. Review PR #2 (see above). Get the Nebius key working and ping the models.
+- [ ] **Aryesh:** merge `aryesh/core-from-pr1`. Review PR #2 (see above).
+- [ ] **Ruchir:** Nebius key + model check (item 1 below) **first thing**, then the dashboard.
 - [ ] **Aryesh:** first **real** Core campaign on one small, pure-Python package (candidates: `python-slugify`, `toml`, `tabulate`) with `--budget 0.50 --airgapped --sandbox docker` as soon as Jatin's Docker run is confirmed. Fix whatever breaks in contract extraction, harness generation and the investigator loop. This is where the prompts meet reality for the first time.
 - [ ] **Jatin:** real Docker run (above). Then prepare 2 real packages (clone + install inside the sandbox works, `setup_cmds` recorded) and run one Core campaign on each with `--online-lookup` so we get real Tavily receipts.
 - [ ] **Jatin:** on PR #2, split the reusable part (`EvalTask`, `load_manifest`, `compute_metrics`, the Markdown table) from the hand-written self-test, give each arm its own `Budget(task.budget_usd)`, and drop `--sandbox local` for real packages.
@@ -68,53 +69,32 @@ The plan itself is unchanged: **find bugs that break what the docs promise, try 
 - [ ] **ALL:** final checklist: repo **public**, license visible, demo live until Dec 15, video public, submit
 
 ## Ruchir's work (Oct 27–29, in priority order)
-All five items are yours alone; none waits on Aryesh or Jatin. Everything you need is on `main` plus `samples/report.json`. If a field is unclear, post the question in the group chat and keep going with the next item.
+All items are yours alone; none waits on Aryesh or Jatin. Items 1, 3 and 4 are backend work in Python; 2, 5 and 6 are the product. If something is unclear, post the question in the group chat and move to the next item. Suggested time next to each.
 
-1. **Dashboard against the current `samples/report.json`** (Next.js, Vercel free tier). Pages:
-   - **Run overview:** library name + version/commit, `status_counts`, total cost, `cost_per_validated_finding` (show "n/a" when null; never divide by zero in the UI), Tavily credits used.
-   - **Finding card** answering the 5 questions below, using these fields: `contract.claim` + `contract.evidence[]` (source link, excerpt, retrieved live/cache/manual) → Q1; `repro`, `actual`, `expected` → Q2; `checks[]` (`question`, `tool`, `result`, `effect`) + `control` + `replays_passed/attempted` → Q3; `status`, `uncertainty`, `rejection_reason`, `known_behaviour` → Q4; `cost_usd`, `route_trace[]` → Q5.
-   - **Rejected and unresolved view:** same cards, filtered. The judges must see what we threw away.
-   - **Cost view:** `cost_by_model` and per-finding cost; a small table, no fancy chart needed.
-   - **Replay mode:** load any `report.json` by file upload or `?report=<url>`; this is how the demo stays live after credits run out.
-2. **PBT-Bench task selection, before any campaign runs** (half a day, solo):
-   - Write `benchmark/SELECTION.md`: the rules (4 L1, 4 L2, 2 L3; pure Python; installs offline inside Docker; docs in the repo) and why.
-   - Run 2 tasks through PBT-Bench's **own** evaluator yourself (no Nightshift, no API key needed) and paste its output format into `SELECTION.md`.
-   - Commit `benchmark/tasks.json` in the manifest format above. `known_defects` and `hard_negatives` stay out of anything the agent reads.
-3. **Deploy** (Oct 28): Vercel, replay mode on by default, "try live" button capped at $0.25 and off when credits are gone.
-4. **Video + Devpost + diagram** (Oct 29): one real finding card walked end to end, the benchmark table from `benchmark/RESULTS.md`, the cost. Script it on Oct 28 evening so recording is quick. The only input you need from others is the `runs/` folder, which Aryesh commits on Oct 28.
-5. **Submission checklist owner:** you own the Oct 29 checklist and ping everyone until each box is ticked.
+1. **Access and model check (today, first, ~1–2 h).**
+   - Get the Nebius Token Factory API key (the hackathon credits page) and a Tavily key. Put them in your local `.env` as `NEBIUS_API_KEY` and `TAVILY_API_KEY`. Never commit them.
+   - Run `uv run python scripts/check_models.py`. It lists the models the key can see, calls each of Lightning / Super / Ultra once (well under $0.01), and prints token usage and whether the thinking switch worked.
+   - Write what you saw into `docs/access.md`: exact model IDs, which endpoint served Ultra, whether `chat_template_kwargs.enable_thinking` or a `reasoning_budget` field was honoured, prices from the pricing page. If any ID differs from `src/nightshift/config.py`, change `config.py` in the same PR.
+   - Post in the group chat the moment the three models answer. Everything Aryesh does today waits on this.
+2. **Dashboard against `samples/report.json`** (today + tomorrow, Next.js, Vercel free tier):
+   - **Run overview:** library name + version/commit, `status_counts`, total cost, `cost_per_validated_finding` ("n/a" when null; never divide by zero in the UI), Tavily credits used.
+   - **Finding card** answering the 5 questions below: `contract.claim` + `contract.evidence[]` (source link, excerpt, retrieved live/cache/manual) → Q1; `repro`, `actual`, `expected` → Q2; `checks[]` (`question`, `tool`, `result`, `effect`) + `control` + `replays_passed/attempted` → Q3; `status`, `uncertainty`, `rejection_reason`, `known_behaviour` → Q4; `cost_usd`, `route_trace[]` → Q5.
+   - **Rejected and unresolved view** (same cards, filtered) and a **cost table** (`cost_by_model`, per-finding cost).
+   - **Replay mode:** load any `report.json` by file upload or `?report=<url>`. This is how the demo stays live after credits run out.
+3. **Human-validation CLI (Oct 28 morning, ~2 h, Python).** `scripts/validate_finding.py <run_dir> <finding_id>`: prints the finding's claim, evidence and repro; runs `findings/<id>/repro.py` in a fresh process and shows the output; asks `validated / rejected / skip`; on an answer, rewrites `report.json` with the new `status` (`human_validated` or `rejected` with your typed reason), `validated_by` and an ISO timestamp, via `Report.load` / `Report.write` in `src/nightshift/report.py`. Add one test. This is the only code path allowed to set `human_validated`.
+4. **Benchmark manifest and scoring (today evening + Oct 28, Python).**
+   - `benchmark/SELECTION.md`: the rules (4 L1, 4 L2, 2 L3; pure Python; installs offline inside Docker; docs in the repo) and why.
+   - Run 2 tasks through PBT-Bench's **own** evaluator (no Nightshift, no API key) and paste its output format into `SELECTION.md`.
+   - `benchmark/tasks.json` in the manifest format above. `known_defects` and `hard_negatives` stay out of anything the agent reads.
+   - `scripts/score_benchmark.py <runs_dir> <tasks.json>`: for each task, point PBT-Bench's evaluator at the `findings/<id>/repro.py` files of the run, collect its verdicts, and write `benchmark/RESULTS.md` with the table (precision, recall, cost, with denominators) for baseline and core. No keyword matching, no hand-typed numbers.
+5. **Deploy** (Oct 28): Vercel, replay mode on by default, "try live" button capped at $0.25 and off when credits are gone.
+6. **Video + Devpost + diagram** (Oct 29): one real finding card walked end to end, the table from `benchmark/RESULTS.md`, the cost. Script it on Oct 28 evening. The only input you need from others is the `runs/` folder, which Aryesh commits on Oct 28.
+7. **Submission checklist owner:** you own the Oct 29 checklist and ping everyone until each box is ticked.
 
 What **not** to spend time on: a learned router view, patch diffs (optional and last), animations, a landing page.
 
-## Key CLI Commands
-
-### 1. Run Nightshift Core Bug-Hunting Pipeline
-Run the autonomous contract-first bug hunter in isolated Docker containers:
-```bash
-python -m nightshift.cli run <repo_url> --package <pkg> --mode core --sandbox docker
-```
-Common options:
-- `--online-lookup`: Enable bounded Tavily documentation extraction & known-issue search.
-- `--airgapped`: Disable external lookups and cache retrieval (required for benchmark tasks).
-- `--budget 2.0`: Hard USD ceiling for the campaign.
-- `--doc-path docs/api.rst`: Include specific documentation files from checkout.
-
-### 2. Run Paired Evaluation Harness
-Run matched-budget paired comparison (Baseline vs. Nightshift Core) under airgapped Tavily:
-```bash
-# Fast offline self-test (0 API spend, runs in milliseconds with toycodec):
-python scripts/run_evaluation.py --self-test
-
-# Benchmark evaluation across a task manifest:
-python scripts/run_evaluation.py --manifest tasks.json --sandbox docker --output-md runs/evaluation/summary.md
-```
-Metrics computed and formatted in JSON & Markdown:
-- `report_precision` (unique validated findings / reports reviewed)
-- `known_defect_recall` (known defects exposed / defects evaluated)
-- `false_positive_rate` (negative candidates incorrectly retained)
-- `cost_per_validated_finding` (None if 0 findings)
-- `valid_input_rate` (reach rate / valid inputs tested)
-- `tavily_credits` (0.0 airgapped verified)
+## Aryesh's work (Oct 27–29)
+Backend only. Merge `aryesh/core-from-pr1`; review PR #2; once Ruchir's model check and Jatin's Docker run are green, run the first real Core campaign and fix contract extraction, harness generation and the investigator loop against a real model; run the 20-campaign comparison on Oct 28 and commit `runs/`; capped Ultra review on validated survivors; tag `v0.1` on Oct 29.
 
 ## Every finding card answers 5 questions
 1. What documented behaviour seems broken? (with the doc link + excerpt)

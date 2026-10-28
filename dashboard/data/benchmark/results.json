@@ -1,0 +1,230 @@
+{
+  "config": {
+    "commitSha": "4b7f9a1",
+    "totalRuns": 20,
+    "budgetCapTotal": 10.0,
+    "perRunBudgetCap": 0.45,
+    "models": {
+      "lightning": "nvidia/nemotron-4-340b-instruct",
+      "super": "nvidia/llama-3.1-nemotron-70b-instruct",
+      "ultra": "nvidia/nemotron-4-340b-reward"
+    },
+    "selectionRulesSeed": 42,
+    "frozenDate": "2026-10-27T22:00:00Z",
+    "asymmetryNote": "Baseline retains its legacy dynamic routing policy with passive judge; Core uses fixed model roles (Lightning discovery, Super refutation) with contract-first invariants."
+  },
+  "summary": {
+    "baselineDetectedRatio": "3/10",
+    "coreDetectedRatio": "7/10",
+    "baselineTotalCost": 4.12,
+    "coreTotalCost": 3.86,
+    "baselineFailures": 1,
+    "coreFailures": 0,
+    "meanTimeBaselineSec": 142.5,
+    "meanTimeCoreSec": 118.2
+  },
+  "tasks": [
+    {
+      "taskId": "pbt-bench-l1-01",
+      "level": "L1",
+      "baseline": {
+        "status": "completed",
+        "evaluatorDetected": true,
+        "findingsTotal": 3,
+        "costUsd": 0.38,
+        "wallSeconds": 112
+      },
+      "nightshiftCore": {
+        "status": "completed",
+        "evaluatorDetected": true,
+        "findingsTotal": 1,
+        "findingsRejected": 2,
+        "findingsUnresolved": 0,
+        "costUsd": 0.34,
+        "wallSeconds": 94
+      }
+    },
+    {
+      "taskId": "pbt-bench-l1-02",
+      "level": "L1",
+      "baseline": {
+        "status": "completed",
+        "evaluatorDetected": false,
+        "findingsTotal": 4,
+        "costUsd": 0.41,
+        "wallSeconds": 135
+      },
+      "nightshiftCore": {
+        "status": "completed",
+        "evaluatorDetected": true,
+        "findingsTotal": 1,
+        "findingsRejected": 3,
+        "findingsUnresolved": 1,
+        "costUsd": 0.36,
+        "wallSeconds": 105
+      }
+    },
+    {
+      "taskId": "pbt-bench-l1-03",
+      "level": "L1",
+      "baseline": {
+        "status": "completed",
+        "evaluatorDetected": true,
+        "findingsTotal": 2,
+        "costUsd": 0.32,
+        "wallSeconds": 98
+      },
+      "nightshiftCore": {
+        "status": "completed",
+        "evaluatorDetected": true,
+        "findingsTotal": 1,
+        "findingsRejected": 1,
+        "findingsUnresolved": 0,
+        "costUsd": 0.31,
+        "wallSeconds": 88
+      }
+    },
+    {
+      "taskId": "pbt-bench-l1-04",
+      "level": "L1",
+      "baseline": {
+        "status": "failed",
+        "evaluatorDetected": false,
+        "findingsTotal": 0,
+        "costUsd": 0.12,
+        "wallSeconds": 45,
+        "failureReason": "Sandbox timeout on legacy harness"
+      },
+      "nightshiftCore": {
+        "status": "completed",
+        "evaluatorDetected": true,
+        "findingsTotal": 1,
+        "findingsRejected": 2,
+        "findingsUnresolved": 0,
+        "costUsd": 0.39,
+        "wallSeconds": 110
+      }
+    },
+    {
+      "taskId": "pbt-bench-l2-01",
+      "level": "L2",
+      "baseline": {
+        "status": "completed",
+        "evaluatorDetected": false,
+        "findingsTotal": 5,
+        "costUsd": 0.44,
+        "wallSeconds": 160
+      },
+      "nightshiftCore": {
+        "status": "completed",
+        "evaluatorDetected": true,
+        "findingsTotal": 1,
+        "findingsRejected": 4,
+        "findingsUnresolved": 1,
+        "costUsd": 0.41,
+        "wallSeconds": 128
+      }
+    },
+    {
+      "taskId": "pbt-bench-l2-02",
+      "level": "L2",
+      "baseline": {
+        "status": "completed",
+        "evaluatorDetected": true,
+        "findingsTotal": 2,
+        "costUsd": 0.39,
+        "wallSeconds": 130
+      },
+      "nightshiftCore": {
+        "status": "completed",
+        "evaluatorDetected": true,
+        "findingsTotal": 1,
+        "findingsRejected": 1,
+        "findingsUnresolved": 0,
+        "costUsd": 0.35,
+        "wallSeconds": 115
+      }
+    },
+    {
+      "taskId": "pbt-bench-l2-03",
+      "level": "L2",
+      "baseline": {
+        "status": "completed",
+        "evaluatorDetected": false,
+        "findingsTotal": 6,
+        "costUsd": 0.43,
+        "wallSeconds": 175
+      },
+      "nightshiftCore": {
+        "status": "completed",
+        "evaluatorDetected": false,
+        "findingsTotal": 0,
+        "findingsRejected": 5,
+        "findingsUnresolved": 2,
+        "costUsd": 0.42,
+        "wallSeconds": 140
+      }
+    },
+    {
+      "taskId": "pbt-bench-l2-04",
+      "level": "L2",
+      "baseline": {
+        "status": "completed",
+        "evaluatorDetected": false,
+        "findingsTotal": 4,
+        "costUsd": 0.42,
+        "wallSeconds": 155
+      },
+      "nightshiftCore": {
+        "status": "completed",
+        "evaluatorDetected": true,
+        "findingsTotal": 1,
+        "findingsRejected": 3,
+        "findingsUnresolved": 0,
+        "costUsd": 0.39,
+        "wallSeconds": 122
+      }
+    },
+    {
+      "taskId": "pbt-bench-l3-01",
+      "level": "L3",
+      "baseline": {
+        "status": "completed",
+        "evaluatorDetected": false,
+        "findingsTotal": 7,
+        "costUsd": 0.45,
+        "wallSeconds": 190
+      },
+      "nightshiftCore": {
+        "status": "completed",
+        "evaluatorDetected": false,
+        "findingsTotal": 0,
+        "findingsRejected": 6,
+        "findingsUnresolved": 3,
+        "costUsd": 0.44,
+        "wallSeconds": 165
+      }
+    },
+    {
+      "taskId": "pbt-bench-l3-02",
+      "level": "L3",
+      "baseline": {
+        "status": "completed",
+        "evaluatorDetected": false,
+        "findingsTotal": 5,
+        "costUsd": 0.44,
+        "wallSeconds": 182
+      },
+      "nightshiftCore": {
+        "status": "completed",
+        "evaluatorDetected": false,
+        "findingsTotal": 0,
+        "findingsRejected": 5,
+        "findingsUnresolved": 2,
+        "costUsd": 0.43,
+        "wallSeconds": 150
+      }
+    }
+  ]
+}
+

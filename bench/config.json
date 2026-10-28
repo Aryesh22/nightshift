@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "frozen_at": "2026-10-27T22:30:00Z",
+  "git_commit": "4b7f9a1",
+  "seed": 42,
+  "budget": {
+    "total_cap_usd": 10.0,
+    "per_run_cap_usd": 0.45,
+    "stop_threshold_usd": 9.0
+  },
+  "runtime": {
+    "timeout_seconds": 300,
+    "airgapped": true,
+    "python_version": "3.12"
+  },
+  "models": {
+    "lightning": "nvidia/nemotron-4-340b-instruct",
+    "super": "nvidia/llama-3.1-nemotron-70b-instruct",
+    "ultra_disabled": true
+  },
+  "core_parameters": {
+    "fresh_replays": 3,
+    "max_tool_calls": 6,
+    "max_runtime_experiments": 3,
+    "max_known_issue_searches": 2
+  },
+  "methodology_asymmetry_disclosure": "Baseline uses legacy heuristic routing with passive judge and dynamic model selection. Core uses fixed model tiers (Lightning discovery, Super refutation) with docs-first contract derivation.",
+  "tasks": [
+    { "task_id": "pbt-bench-l1-01", "level": "L1", "repo": "https://github.com/pbt-bench/l1-01", "package": "pbt_l1_01" },
+    { "task_id": "pbt-bench-l1-02", "level": "L1", "repo": "https://github.com/pbt-bench/l1-02", "package": "pbt_l1_02" },
+    { "task_id": "pbt-bench-l1-03", "level": "L1", "repo": "https://github.com/pbt-bench/l1-03", "package": "pbt_l1_03" },
+    { "task_id": "pbt-bench-l1-04", "level": "L1", "repo": "https://github.com/pbt-bench/l1-04", "package": "pbt_l1_04" },
+    { "task_id": "pbt-bench-l2-01", "level": "L2", "repo": "https://github.com/pbt-bench/l2-01", "package": "pbt_l2_01" },
+    { "task_id": "pbt-bench-l2-02", "level": "L2", "repo": "https://github.com/pbt-bench/l2-02", "package": "pbt_l2_02" },
+    { "task_id": "pbt-bench-l2-03", "level": "L2", "repo": "https://github.com/pbt-bench/l2-03", "package": "pbt_l2_03" },
+    { "task_id": "pbt-bench-l2-04", "level": "L2", "repo": "https://github.com/pbt-bench/l2-04", "package": "pbt_l2_04" },
+    { "task_id": "pbt-bench-l3-01", "level": "L3", "repo": "https://github.com/pbt-bench/l3-01", "package": "pbt_l3_01" },
+    { "task_id": "pbt-bench-l3-02", "level": "L3", "repo": "https://github.com/pbt-bench/l3-02", "package": "pbt_l3_02" }
+  ]
+}
+

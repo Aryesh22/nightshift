@@ -1,0 +1,18 @@
+[
+  {
+    "runId": "FAKE-2026-10-23-fakelib",
+    "libraryName": "fakelib",
+    "version": "1.4.2",
+    "mode": "core",
+    "createdAt": "Recent run",
+    "isSample": true,
+    "totalFindings": 4,
+    "activeCount": 2,
+    "humanValidatedCount": 1,
+    "aiReviewedCount": 1,
+    "unresolvedCount": 1,
+    "rejectedCount": 1,
+    "confirmedCostUsd": 0.87,
+    "pendingCostUsd": 0
+  }
+]

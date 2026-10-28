@@ -221,4 +221,9 @@ __marimo__/
 
 # Nightshift
 .nightshift/
-runs/
+/runs/
+
+# Dashboard directory exceptions
+!dashboard/lib/
+!dashboard/app/runs/
+!dashboard/data/runs/
